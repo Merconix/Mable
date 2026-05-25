@@ -17,17 +17,25 @@
   url('../public/font/AdwaitaMono-Regular.ttf');
   font-display: swap;
 }
-
+@font-face {
+  font-family:AdwaitaSans;
+  src:url(/mable/assets/AdwaitaSans-Regular-CowLxMoJ.ttf);
+  font-display:swap
+}
+@font-face {
+  font-family:AdwaitaMono;
+  src:url(/mable/assets/AdwaitaMono-Regular-wsVtlayZ.ttf);
+  font-display:swap
+}
 :root {
   --tc-link: hsl(39.4, 100%, 45.1%);
 
 @layer sable-reset {
   :root {
-    --tc-link: hsl(213deg 100% 45%);
-
+  --tc-link: hsl(213deg 100% 45%);
   --font-emoji: 'Twemoji_DISABLED';
-  --font-secondary: 'AdwaitaSans', var(--font-emoji), sans-serif;
-  --font-monospace: 'AdwaitaMono', monospace;
+  --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
+  --font-monospace: "AdwaitaMono", monospace
 }
 
 .dark-theme,
@@ -37,9 +45,8 @@
   .dark-theme,
   .sable-remote-kind-dark {
     --tc-link: hsl(213deg 100% 80%);
-
-  --font-secondary: 'AdwaitaSans', var(--font-emoji), sans-serif;
-  --font-monospace: 'AdwaitaMono', monospace;
+  --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
+  --font-monospace: "AdwaitaMono", monospace
 }
 
     --font-secondary: 'Nunito Variable', var(--font-emoji), sans-serif;
