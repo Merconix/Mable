@@ -1,6 +1,6 @@
 {
   "defaultHomeserver": 0,
-  "homeserverList": ["matrix.org", "mozilla.org", "unredacted.org", "sable.moe", "kendama.moe"],
+  "homeserverList": ["matrix.merconix.com", "matrix.org", "mozilla.org", "unredacted.org", "sable.moe", "kendama.moe"],
   "allowCustomHomeservers": true,
   "elementCallUrl": null,
 
@@ -43,6 +43,6 @@
 
   "hashRouter": {
     "enabled": false,
-    "basename": "/"
+    "basename": "/mable"
   }
 }
