@@ -6,8 +6,22 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: AdwaitaSans;
+  src:
+  url('../public/font/AdwaitaSans-Regular.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: AdwaitaMono;
+  src:
+  url('../public/font/AdwaitaMono-Regular.ttf');
+  font-display: swap;
+}
+
 :root {
-  --tc-link: hsl(213deg 100% 45%);
+  --tc-link: hsl(39.4, 100%, 45.1%);
 
   /* user mxid colors */
   --mx-uc-1: hsl(208, 100%, 45%);
