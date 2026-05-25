@@ -50,7 +50,7 @@ export function WelcomePage() {
                   before={<Icon size="200" src={Icons.Heart} />}
                 >
                   <Text as="span" size="B400" truncate>
-                    Support
+                    Support Sable
                   </Text>
                 </Button>
               </Box>
@@ -58,13 +58,13 @@ export function WelcomePage() {
             <Box direction="Column" gap="200" alignItems="Center">
               <Button
                 as="a"
-                href="https://github.com/SableClient/Sable/blob/dev/CHANGELOG.md"
+                href="https://github.com/Merconix/Mable/blob/dev/CHANGELOG.md"
                 target="_blank"
                 rel="noreferrer noopener"
                 before={<Icon size="200" src={Icons.Code} />}
               >
                 <Text as="span" size="B400" truncate>
-                  Sable
+                  Changelog
                 </Text>
               </Button>
             </Box>
