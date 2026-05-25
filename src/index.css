@@ -5,9 +5,18 @@
     url('../public/font/Twemoji.Mozilla.v15.1.0.ttf');
   font-display: swap;
 }
-
+@font-face {
+  font-family:AdwaitaSans;
+  src:url(/mable/assets/AdwaitaSans-Regular-CowLxMoJ.ttf);
+  font-display:swap
+}
+@font-face {
+  font-family:AdwaitaMono;
+  src:url(/mable/assets/AdwaitaMono-Regular-wsVtlayZ.ttf);
+  font-display:swap
+}
 :root {
-  --tc-link: hsl(213deg 100% 45%);
+  --tc-link: hsl(39.4, 100%, 45.1%);
 
   /* user mxid colors */
   --mx-uc-1: hsl(208, 100%, 45%);
@@ -20,8 +29,8 @@
   --mx-uc-8: hsl(94, 100%, 35%);
 
   --font-emoji: 'Twemoji_DISABLED';
-  --font-secondary: 'Nunito Variable', var(--font-emoji), sans-serif;
-  --font-monospace: 'Space Mono', monospace;
+  --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
+  --font-monospace: "AdwaitaMono", monospace
 }
 
 .dark-theme,
@@ -37,8 +46,8 @@
   --mx-uc-7: hsl(40, 100%, 75%);
   --mx-uc-8: hsl(0, 100%, 75%);
 
-  --font-secondary: 'Nunito Variable', var(--font-emoji), sans-serif;
-  --font-monospace: 'Space Mono', monospace;
+  --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
+  --font-monospace: "AdwaitaMono", monospace
 }
 
 html {
