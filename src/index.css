@@ -1,7 +1,25 @@
 @import '@sableclient/twemoji-font';
 @import 'folds/dist/style.css' layer(folds);
 
+
 @layer sable-reset, folds;
+
+@font-face {
+  font-family: AdwaitaSans;
+  src:
+  url('../public/font/AdwaitaSans-Regular.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: AdwaitaMono;
+  src:
+  url('../public/font/AdwaitaMono-Regular.ttf');
+  font-display: swap;
+}
+
+:root {
+  --tc-link: hsl(39.4, 100%, 45.1%);
 
 @layer sable-reset {
   :root {
