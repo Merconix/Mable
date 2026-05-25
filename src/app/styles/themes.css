@@ -27,11 +27,11 @@
   --sable-primary-main-active: #144bb5;
   --sable-primary-main-line: #d59d18;
   --sable-primary-on-main: #ffffff;
-  --sable-primary-container: #e8eefb;
-  --sable-primary-container-hover: #dce6f9;
-  --sable-primary-container-active: #d1def7;
-  --sable-primary-container-line: #c5d5f5;
-  --sable-primary-on-container: #113e95;
+  --sable-primary-container: #f6e6cd;
+  --sable-primary-container-hover: #f9efdc;
+  --sable-primary-container-active: #f2e2c6;
+  --sable-primary-container-line: #f0e1be;
+  --sable-primary-on-container: #956111;
 
   /* Secondary */
   --sable-sec-main: #000000;
@@ -116,11 +116,11 @@
   --sable-primary-main-active: #ada3e8;
   --sable-primary-main-line: #f7d7ae;
   --sable-primary-on-main: #2c2843;
-  --sable-primary-container: #413c65;
-  --sable-primary-container-hover: #494370;
-  --sable-primary-container-active: #50497b;
-  --sable-primary-container-line: #575086;
-  --sable-primary-on-container: #e3e1f7;
+  --sable-primary-container: #7a6049;
+  --sable-primary-container-hover: #947553;
+  --sable-primary-container-active: #6d563d;
+  --sable-primary-container-line: #756142;
+  --sable-primary-on-container: #f7f3e1;
 
   /* Secondary */
   --sable-sec-main: #ffffff;
