@@ -34,8 +34,8 @@
   --mx-uc-8: hsl(94, 100%, 35%);
 
   --font-emoji: 'Twemoji_DISABLED';
-  --font-secondary: 'Nunito Variable', var(--font-emoji), sans-serif;
-  --font-monospace: 'Space Mono', monospace;
+  --font-secondary: 'AdwaitaSans', var(--font-emoji), sans-serif;
+  --font-monospace: 'AdwaitaMono', monospace;
 }
 
 .dark-theme,
