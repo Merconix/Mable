@@ -16,12 +16,12 @@ export function WelcomePage() {
         <PageHeroSection>
           <PageHero
             icon={<img width="70" height="70" src={LogoSVG} alt="Sable Logo" />}
-            title="Welcome to Sable"
+            title="Welcome to Mable"
             subTitle={
               <span>
-                An almost stable Matrix client.{' '}
+                An almost stable Matrix client. Based on the hard work of the Cinny & Sable development teams{' '}
                 <a
-                  href="https://github.com/SableClient/Sable"
+                  href="https://github.com/Merconix/Mable"
                   target="_blank"
                   rel="noreferrer noopener"
                 >
@@ -34,7 +34,7 @@ export function WelcomePage() {
               <Box grow="Yes" style={{ maxWidth: toRem(300) }} direction="Column" gap="300">
                 <Button
                   as="a"
-                  href="https://github.com/SableClient/Sable"
+                  href="https://github.com/Merconix/Mable"
                   target="_blank"
                   rel="noreferrer noopener"
                   before={menuIcon(Code)}
@@ -66,7 +66,7 @@ export function WelcomePage() {
                 before={menuIcon(Code)}
               >
                 <Text as="span" size="B400" truncate>
-                  Features
+                  Sable
                 </Text>
               </Button>
             </Box>
