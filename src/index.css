@@ -25,15 +25,10 @@
   :root {
     --tc-link: hsl(213deg 100% 45%);
 
-    /* user mxid colors */
-    --mx-uc-1: hsl(208, 100%, 45%);
-    --mx-uc-2: hsl(302, 100%, 30%);
-    --mx-uc-3: hsl(163, 100%, 30%);
-    --mx-uc-4: hsl(343, 100%, 45%);
-    --mx-uc-5: hsl(24, 100%, 45%);
-    --mx-uc-6: hsl(181, 100%, 30%);
-    --mx-uc-7: hsl(242, 100%, 45%);
-    --mx-uc-8: hsl(94, 100%, 35%);
+  --font-emoji: 'Twemoji_DISABLED';
+  --font-secondary: 'AdwaitaSans', var(--font-emoji), sans-serif;
+  --font-monospace: 'AdwaitaMono', monospace;
+}
 
     --font-emoji: 'Twemoji_DISABLED';
     --font-secondary: 'Nunito Variable', var(--font-emoji), sans-serif;
