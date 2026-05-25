@@ -62,6 +62,9 @@ After that, you can copy the dist/ directory to your server and serve it.
 
 * In the [`config.json`](config.json), you can modify the default homeservers, feature rooms/spaces, toggle the account switcher, and toggle experimental simplified slilding sync support.
 
+* To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).
+    * For example, if you want to deploy on `https://sable.moe/app`, then set `base: '/app'`.
+
 #### Optional default client settings
 
 While the default settings are recommended for most users, you can optionally add a top-level `"settingsDefaults"` object whose keys match [client settings](src/app/state/settings.ts) (only fields you want to override) to override them. The default settings for any new logins will match these. Existing keys in local storage or users who chose to sync settings with their account data will still have their settings set.
@@ -83,9 +86,6 @@ For example:
 ```
 
 Invalid or unknown keys are ignored.
-
-* To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).
-    * For example, if you want to deploy on `https://sable.moe/app`, then set `base: '/app'`.
 
 ## Local development
 > [!TIP]
