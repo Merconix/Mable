@@ -5,21 +5,16 @@
     url('../public/font/Twemoji.Mozilla.v15.1.0.ttf');
   font-display: swap;
 }
-
 @font-face {
-  font-family: AdwaitaSans;
-  src:
-  url('../public/font/AdwaitaSans-Regular.ttf');
-  font-display: swap;
+  font-family:AdwaitaSans;
+  src:url(/mable/assets/AdwaitaSans-Regular-CowLxMoJ.ttf);
+  font-display:swap
 }
-
 @font-face {
-  font-family: AdwaitaMono;
-  src:
-  url('../public/font/AdwaitaMono-Regular.ttf');
-  font-display: swap;
+  font-family:AdwaitaMono;
+  src:url(/mable/assets/AdwaitaMono-Regular-wsVtlayZ.ttf);
+  font-display:swap
 }
-
 :root {
   --tc-link: hsl(39.4, 100%, 45.1%);
 
@@ -34,13 +29,13 @@
   --mx-uc-8: hsl(94, 100%, 35%);
 
   --font-emoji: 'Twemoji_DISABLED';
-  --font-secondary: 'AdwaitaSans', var(--font-emoji), sans-serif;
-  --font-monospace: 'AdwaitaMono', monospace;
+  --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
+  --font-monospace: "AdwaitaMono", monospace
 }
 
 .dark-theme,
 .sable-remote-kind-dark {
-  --tc-link: hsl(39.4, 100%, 45.1%);
+  --tc-link: hsl(37.03deg 100% 80%);
 
   --mx-uc-1: hsl(260, 100%, 75%);
   --mx-uc-2: hsl(320, 100%, 75%);
@@ -51,8 +46,8 @@
   --mx-uc-7: hsl(40, 100%, 75%);
   --mx-uc-8: hsl(0, 100%, 75%);
 
-  --font-secondary: 'AdwaitaSans', var(--font-emoji), sans-serif;
-  --font-monospace: 'AdwaitaMono', monospace;
+  --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
+  --font-monospace: "AdwaitaMono", monospace
 }
 
 html {
