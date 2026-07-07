@@ -7,9 +7,7 @@ import {
   Box,
   Chip,
   Header,
-  Icon,
   IconButton,
-  Icons,
   Input,
   MenuItem,
   PopOut,
@@ -41,6 +39,16 @@ import { useAtomValue } from 'jotai';
 import { nicknamesAtom } from '$state/nicknames';
 import { ScrollTopContainer } from '$components/scroll-top-container';
 import { UserAvatar } from '$components/user-avatar';
+import {
+  ArrowsDownUp,
+  CaretUp,
+  chipIcon,
+  composerIcon,
+  Funnel,
+  MagnifyingGlass,
+  userFallbackIcon,
+  X,
+} from '$components/icons/phosphor';
 import { useRoomTypingMember } from '$hooks/useRoomTypingMembers';
 import { useMediaAuthentication } from '$hooks/useMediaAuthentication';
 import { useMembershipFilter, useMembershipFilterMenu } from '$hooks/useMemberFilter';
@@ -93,7 +101,7 @@ function MemberDrawerHeader({ room, hideText }: MemberDrawerHeaderProps) {
                 variant="Background"
                 onClick={() => setPeopleDrawer(false)}
               >
-                <Icon src={Icons.Cross} />
+                {composerIcon(X)}
               </IconButton>
             )}
           </TooltipProvider>
@@ -159,7 +167,7 @@ function MemberItem({
             userId={member.userId}
             src={avatarUrl ?? undefined}
             alt={name}
-            renderFallback={() => <Icon size="100" src={Icons.User} filled />}
+            renderFallback={() => userFallbackIcon('md')}
           />
         </Avatar>
       </AvatarPresence>
@@ -225,8 +233,6 @@ const SEARCH_OPTIONS: UseAsyncSearchOptions = {
 };
 
 const mxIdToName = (mxId: string) => getMxIdLocalPart(mxId) ?? mxId;
-const getRoomMemberStr: SearchItemStrGetter<RoomMember> = (m, query) =>
-  getMemberSearchStr(m, query, mxIdToName);
 
 type MembersDrawerProps = {
   room: Room;
@@ -234,6 +240,7 @@ type MembersDrawerProps = {
 };
 export function MembersDrawer({ room, members }: MembersDrawerProps) {
   const mx = useMatrixClient();
+  const nicknames = useAtomValue(nicknamesAtom);
   const useAuthentication = useMediaAuthentication();
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -263,6 +270,11 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
     () =>
       members.filter(membershipFilter.filterFn).toSorted(memberSort.sortFn).sort(memberPowerSort),
     [members, membershipFilter, memberSort, memberPowerSort]
+  );
+
+  const getRoomMemberStr = useCallback<SearchItemStrGetter<RoomMember>>(
+    (m, query) => getMemberSearchStr(m, query, mxIdToName, nicknames),
+    [nicknames]
   );
 
   const [result, search, resetSearch] = useAsyncSearch(
@@ -378,7 +390,7 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
                             variant="Background"
                             size="400"
                             radii="300"
-                            before={<Icon src={Icons.Filter} size="50" />}
+                            before={chipIcon(Funnel)}
                           >
                             <Text size="T200">{membershipFilter.name}</Text>
                           </Chip>
@@ -410,7 +422,7 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
                             variant="Background"
                             size="400"
                             radii="300"
-                            after={<Icon src={Icons.Sort} size="50" />}
+                            after={chipIcon(ArrowsDownUp)}
                           >
                             <Text size="T200">{memberSort.name}</Text>
                           </Chip>
@@ -427,7 +439,7 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
                       variant="Surface"
                       size="400"
                       radii="400"
-                      before={<Icon size="50" src={Icons.Search} />}
+                      before={chipIcon(MagnifyingGlass)}
                       after={
                         result && (
                           <Chip
@@ -442,7 +454,7 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
                               }
                               resetSearch();
                             }}
-                            after={<Icon size="50" src={Icons.Cross} />}
+                            after={chipIcon(X)}
                           >
                             <Text size="B300">{`${result.items.length || 'No'} ${
                               result.items.length === 1 ? 'Result' : 'Results'
@@ -463,7 +475,7 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
                     size="300"
                     aria-label="Scroll to Top"
                   >
-                    <Icon src={Icons.ChevronTop} size="300" />
+                    {composerIcon(CaretUp)}
                   </IconButton>
                 </ScrollTopContainer>
 

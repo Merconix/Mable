@@ -1,5 +1,6 @@
 import type { BasePoint, BaseRange } from 'slate';
 import { Editor, Element, Point, Range, Text, Transforms } from 'slate';
+import { ReactEditor } from 'slate-react';
 import type { Room } from '$types/matrix-sdk';
 import type { Nicknames } from '$state/nicknames';
 import { getMxIdLocalPart, isUserId } from '$utils/matrix';
@@ -155,6 +156,16 @@ export const moveCursor = (editor: Editor, withSpace?: boolean) => {
   Transforms.move(editor);
   if (withSpace) editor.insertText(' ');
   Transforms.collapse(editor, { edge: 'end' });
+};
+
+export const focusEditor = (editor: Editor) => {
+  requestAnimationFrame(() => {
+    try {
+      ReactEditor.focus(editor);
+    } catch {
+      // Slate DOM may not reflect the latest selection yet.
+    }
+  });
 };
 
 interface PointUntilCharOptions {

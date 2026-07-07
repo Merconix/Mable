@@ -1,10 +1,17 @@
-import { Avatar, Box, Icon, Icons, Text, toRem } from 'folds';
-import { useAtomValue } from 'jotai';
+import { Avatar, Box, Text, toRem } from 'folds';
+import { ChatCircleDots, EnvelopeSimple, Tray, sizedIcon } from '$components/icons/phosphor';
 import { NavCategory, NavItem, NavItemContent, NavLink } from '$components/nav';
-import { getInboxInvitesPath, getInboxNotificationsPath } from '$pages/pathUtils';
-import { useInboxInvitesSelected, useInboxNotificationsSelected } from '$hooks/router/useInbox';
+import {
+  getInboxBookmarksPath,
+  getInboxInvitesPath,
+  getInboxNotificationsPath,
+} from '$pages/pathUtils';
+import {
+  useInboxBookmarksSelected,
+  useInboxInvitesSelected,
+  useInboxNotificationsSelected,
+} from '$hooks/router/useInbox';
 import { UnreadBadge } from '$components/unread-badge';
-import { allInvitesAtom } from '$state/room-list/inviteList';
 import { useNavToActivePathMapper } from '$hooks/useNavToActivePathMapper';
 import { PageNav, PageNavContent, PageNavHeader } from '$components/page';
 import { SidebarResizer } from '$pages/client/sidebar/SidebarResizer';
@@ -12,11 +19,14 @@ import { useSetting } from '$state/hooks/settings';
 import { settingsAtom } from '$state/settings';
 import { useEffect, useState } from 'react';
 import { ScreenSize, useScreenSizeContext } from '$hooks/useScreenSize';
+import { useInviteCount } from '$hooks/useInviteCount';
+import { BookmarkIcon } from '@phosphor-icons/react';
+import { isResizingSidebarAtom } from '$state/isResizingSidebar';
+import { useSetAtom } from 'jotai';
 
 function InvitesNavItem({ hideText }: { hideText?: boolean }) {
   const invitesSelected = useInboxInvitesSelected();
-  const allInvites = useAtomValue(allInvitesAtom);
-  const inviteCount = allInvites.length;
+  const inviteCount = useInviteCount();
 
   return (
     <NavItem
@@ -33,7 +43,7 @@ function InvitesNavItem({ hideText }: { hideText?: boolean }) {
               radii="400"
               style={hideText ? { width: '100%', padding: '0' } : { height: '100%' }}
             >
-              <Icon src={Icons.Mail} size="100" filled={invitesSelected} />
+              {sizedIcon(EnvelopeSimple, '100', { filled: invitesSelected })}
             </Avatar>
             {!hideText && (
               <Box as="span" grow="Yes">
@@ -53,7 +63,9 @@ function InvitesNavItem({ hideText }: { hideText?: boolean }) {
 export function Inbox() {
   useNavToActivePathMapper('inbox');
   const notificationsSelected = useInboxNotificationsSelected();
+  const bookmarksSelected = useInboxBookmarksSelected();
 
+  const setIsResizingSidebar = useSetAtom(isResizingSidebarAtom);
   const [roomSidebarWidth, setRoomSidebarWidth] = useSetting(settingsAtom, 'roomSidebarWidth');
   const [curWidth, setCurWidth] = useState(roomSidebarWidth);
 
@@ -73,7 +85,7 @@ export function Inbox() {
       }}
     >
       <PageNav>
-        <PageNavHeader>
+        <PageNavHeader size="600">
           <Box grow="Yes" gap="300" justifyContent="Center">
             {!hideText ? (
               <Box grow="Yes">
@@ -82,7 +94,7 @@ export function Inbox() {
                 </Text>
               </Box>
             ) : (
-              <Icon src={Icons.Inbox} size="200" filled />
+              sizedIcon(Tray, '200', { filled: true })
             )}
           </Box>
         </PageNavHeader>
@@ -99,7 +111,7 @@ export function Inbox() {
                         radii="400"
                         style={hideText ? { width: '100%', padding: '0' } : { height: '100%' }}
                       >
-                        <Icon src={Icons.MessageUnread} size="100" filled={notificationsSelected} />
+                        {sizedIcon(ChatCircleDots, '100', { filled: notificationsSelected })}
                       </Avatar>
                       {!hideText && (
                         <Box as="span" grow="Yes">
@@ -113,6 +125,24 @@ export function Inbox() {
                 </NavLink>
               </NavItem>
               <InvitesNavItem hideText={hideText} />
+              <NavItem variant="Background" radii="400" aria-selected={bookmarksSelected}>
+                <NavLink to={getInboxBookmarksPath()}>
+                  <NavItemContent>
+                    <Box as="span" grow="Yes" alignItems="Center" gap="200">
+                      <Avatar size="200" radii="400">
+                        {sizedIcon(BookmarkIcon, '100', {
+                          filled: bookmarksSelected,
+                        })}{' '}
+                      </Avatar>
+                      <Box as="span" grow="Yes">
+                        <Text as="span" size="Inherit" truncate>
+                          Bookmarks
+                        </Text>
+                      </Box>
+                    </Box>
+                  </NavItemContent>
+                </NavLink>
+              </NavItem>
             </NavCategory>
           </Box>
         </PageNavContent>
@@ -126,6 +156,7 @@ export function Inbox() {
           outstep={190}
           minValue={50}
           maxValue={500}
+          setAnnouncement={setIsResizingSidebar}
         />
       )}
     </Box>

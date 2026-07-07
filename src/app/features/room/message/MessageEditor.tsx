@@ -2,7 +2,8 @@ import type { KeyboardEventHandler, MouseEventHandler } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import type { RectCords } from 'folds';
-import { Box, Chip, Icon, IconButton, Icons, PopOut, Spinner, Text, as, config } from 'folds';
+import { Box, Chip, IconButton, PopOut, Spinner, Text, as, config } from 'folds';
+import { composerIcon, Smiley } from '$components/icons/phosphor';
 import { Editor, Transforms } from 'slate';
 import { ReactEditor } from 'slate-react';
 import type {
@@ -292,9 +293,10 @@ export const MessageEditor = as<'div', MessageEditorProps>(
         content.format = contentBody.format;
         content.formatted_body = contentBody.formatted_body;
         content['m.new_content'] = newContent;
-        if (oldContent.info !== undefined && oldContent.filename?.length > 0) {
-          content.filename = oldContent.filename;
-          content['m.new_content'].filename = oldContent.filename;
+        if (oldContent.info !== undefined && oldContent.msgtype !== 'm.text') {
+          content.filename = 'filename' in oldContent ? oldContent.filename : oldContent.body;
+          content['m.new_content'].filename =
+            'filename' in oldContent ? oldContent.filename : oldContent.body;
           content.info = oldContent.info;
           content['m.new_content'].info = oldContent.info;
 
@@ -589,7 +591,9 @@ export const MessageEditor = as<'div', MessageEditorProps>(
                               size="300"
                               radii="300"
                             >
-                              <Icon size="400" src={Icons.Smile} filled={anchor !== undefined} />
+                              {composerIcon(Smiley, {
+                                weight: anchor !== undefined ? 'fill' : 'regular',
+                              })}
                             </IconButton>
                           </PopOut>
                         )}
