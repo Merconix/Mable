@@ -18,7 +18,7 @@ export function WelcomePage() {
             title="Welcome to Mable"
             subTitle={
               <span>
-                A M(aybe st)able Matrix client. Based on the hard work of the Cinny & Sable development teams{' '}
+                A M(ostly st)able Matrix client. Based on the hard work of the Cinny & Sable development teams{' '}
                 <a
                   href="https://github.com/Merconix/Mable"
                   target="_blank"
