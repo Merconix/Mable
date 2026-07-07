@@ -1,20 +1,17 @@
-# Sable
+# Mable
 
-A Matrix client built to enhance the user experience with quality-of-life features, cosmetics, utilities, and sheer usability. See the [changelog](https://github.com/SableClient/Sable/blob/dev/CHANGELOG.md).
+A Matrix client built to enhance the user experience with quality-of-life features, cosmetics, utilities, and sheer usability. See the [changelog](https://github.com/Merconix/Mable/blob/dev/CHANGELOG.md).
 
-Soon to be replaced desktop apps can be downloaded [here](https://github.com/7w1/sable/releases/tag/1.0.0). They auto-update by pulling the website.
-
-Join our matrix space [here](https://matrix.to/#/#sable:sable.moe) to discuss features, issues, or meowing.
-
-Forked from [Cinny](https://github.com/cinnyapp/cinny/).
+This fork is a customised version of the [Sable project](https://github.com/sablecient/sable) to stay on more stable builds for longer, and apply personalized tweaks, mostly style related.
+Sable is originally forked from [Cinny](https://github.com/cinnyapp/cinny/), so feel free to check either out as they might better suit your needs.
 
 ## Getting started
-The web app is available at [app.sable.moe](https://app.sable.moe/) and gets updated on frequently, as soon as a feature is deemed stable.
+The web app is available [here](https://merconix.com/mable) and gets updated whenever future releases have new features I'm interested in and are deemed stable.
 
-You can also download our desktop app for windows and linux from [releases](https://github.com/SableClient/Sable/releases/latest).
+Electron-based desktop apps can be downloaded [here](https://github.com/Merconix/Mable-Electron/releases). They auto-update by pulling the website.
 
 ## Self-hosting
-You have a few options for self hosting, you can:
+There are a few options for self hosting, but I do not maintain them, so you are best off using Cinny/Sable for that - The instructions below generally work for them as well so are kept here for reference:
 1. Run the prebuilt docker container.
 2. Deploy on a site like GitLab Pages. Jae has a [guide here](https://docs.j4.lc/Tutorials/Deploying-Sable-on-GitLab-Pages).
 3. Build it yourself.
@@ -62,6 +59,9 @@ After that, you can copy the dist/ directory to your server and serve it.
 
 * In the [`config.json`](config.json), you can modify the default homeservers, feature rooms/spaces, toggle the account switcher, and toggle experimental simplified slilding sync support.
 
+* To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).
+    * For example, if you want to deploy on `https://sable.moe/app`, then set `base: '/app'`.
+
 #### Optional default client settings
 
 While the default settings are recommended for most users, you can optionally add a top-level `"settingsDefaults"` object whose keys match [client settings](src/app/state/settings.ts) (only fields you want to override) to override them. The default settings for any new logins will match these. Existing keys in local storage or users who chose to sync settings with their account data will still have their settings set.
@@ -83,9 +83,6 @@ For example:
 ```
 
 Invalid or unknown keys are ignored.
-
-* To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).
-    * For example, if you want to deploy on `https://sable.moe/app`, then set `base: '/app'`.
 
 ## Local development
 > [!TIP]
