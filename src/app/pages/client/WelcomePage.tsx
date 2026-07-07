@@ -1,5 +1,4 @@
-import { Box, Button, Text, config, toRem } from 'folds';
-import { Code, Heart, menuIcon } from '$components/icons/phosphor';
+import { Box, Button, Icon, Icons, Text, config, toRem } from 'folds';
 import { Page, PageHero, PageHeroSection } from '$components/page';
 import { versionLabel } from '$utils/platform';
 import LogoSVG from '$public/res/svg/logo.svg';
@@ -15,11 +14,11 @@ export function WelcomePage() {
       >
         <PageHeroSection>
           <PageHero
-            icon={<img width="70" height="70" src={LogoSVG} alt="Sable Logo" />}
+            icon={<img width="70" height="70" src={LogoSVG} alt="Mable Logo" />}
             title="Welcome to Mable"
             subTitle={
               <span>
-                An almost stable Matrix client. Based on the hard work of the Cinny & Sable development teams{' '}
+                A M(aybe st)able Matrix client. Based on the hard work of the Cinny & Sable development teams{' '}
                 <a
                   href="https://github.com/Merconix/Mable"
                   target="_blank"
@@ -37,7 +36,7 @@ export function WelcomePage() {
                   href="https://github.com/Merconix/Mable"
                   target="_blank"
                   rel="noreferrer noopener"
-                  before={menuIcon(Code)}
+                  before={<Icon size="200" src={Icons.Code} />}
                 >
                   <Text as="span" size="B400" truncate>
                     Source Code
@@ -45,14 +44,14 @@ export function WelcomePage() {
                 </Button>
                 <Button
                   as="a"
-                  href="https://opencollective.com/sable"
+                  href="https://github.com/Merconix/Mable-Electron/releases/latest"
                   target="_blank"
                   rel="noreferrer noopener"
                   fill="Soft"
-                  before={menuIcon(Heart)}
+                  before={<Icon size="200" src={Icons.Code} />}
                 >
                   <Text as="span" size="B400" truncate>
-                    Support Sable
+                    Desktop App
                   </Text>
                 </Button>
               </Box>
@@ -60,13 +59,13 @@ export function WelcomePage() {
             <Box direction="Column" gap="200" alignItems="Center">
               <Button
                 as="a"
-                href="https://github.com/Merconix/Mable/blob/dev/CHANGELOG.md"
+                href="https://opencollective.com/sable"
                 target="_blank"
                 rel="noreferrer noopener"
-                before={menuIcon(Code)}
+                before={<Icon size="200" src={Icons.Heart} />}
               >
                 <Text as="span" size="B400" truncate>
-                  Changelog
+                  Sable
                 </Text>
               </Button>
             </Box>
