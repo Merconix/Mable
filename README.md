@@ -2,8 +2,8 @@
 
 A Matrix client built to enhance the user experience with quality-of-life features, cosmetics, utilities, and sheer usability. See the [changelog](https://github.com/Merconix/Mable/blob/dev/CHANGELOG.md).
 
-This fork is a customised version of the [Sable project](https://github.com/sablecient/sable) to stay on more stable builds for longer, and apply personalized tweaks, mostly style related.
-Sable is originally forked from [Cinny](https://github.com/cinnyapp/cinny/), so feel free to check either out as they might better suit your needs.
+This fork is a customised version of the [Sable project](https://github.com/sablecient/sable) to stay on more stable builds for longer and apply personalized tweaks, mostly style related.
+Sable is originally forked from the more stable but less feature-packed [Cinny](https://github.com/cinnyapp/cinny/), so feel free to check either out as they might better suit your needs.
 
 ## Getting started
 The web app is available [here](https://merconix.com/mable) and gets updated whenever future releases have new features I'm interested in and are deemed stable.
@@ -11,44 +11,7 @@ The web app is available [here](https://merconix.com/mable) and gets updated whe
 Electron-based desktop apps can be downloaded [here](https://github.com/Merconix/Mable-Electron/releases). They auto-update by pulling the website.
 
 ## Self-hosting
-There are a few options for self hosting, but I do not maintain them, so you are best off using Cinny/Sable for that - The instructions below generally work for them as well so are kept here for reference:
-1. Run the prebuilt docker container.
-2. Deploy on a site like GitLab Pages. Jae has a [guide here](https://docs.j4.lc/Tutorials/Deploying-Sable-on-GitLab-Pages).
-3. Build it yourself.
-
-### Docker
-
-Prebuilt images are published to `ghcr.io/sableclient/sable`.
-
-- `latest` tracks the current latest version release.
-- `dev` tracks the current `dev` branch image.
-- `X.Y.Z` tags are versioned releases.
-- `X.Y` tags float within a release line.
-- Pushes to `dev` also publish a short commit SHA tag.
-
-Run the latest image with:
-
-```sh
-docker run --rm -p 8080:8080 ghcr.io/sableclient/sable:latest
-```
-
-Then open `http://localhost:8080`.
-
-If you want to override the bundled [`config.json`](config.json), mount your own
-file at `/app/config.json`:
-
-```yaml
-services:
-  sable:
-    image: ghcr.io/sableclient/sable:latest
-    ports:
-      - '8080:8080'
-    volumes:
-      - ./config.json:/app/config.json:ro
-```
-
-### Build it yourself
-
+These steps are primarily here for my own reference, but you can follow them to host your own instance if you really want:
 To build and serve Sable yourself with nginx, clone this repo and build it:
 
 ```sh
@@ -62,6 +25,13 @@ After that, you can copy the dist/ directory to your server and serve it.
 
 * To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).
     * For example, if you want to deploy on `https://sable.moe/app`, then set `base: '/app'`.
+    * This is set to default to /mable in this branch
+* Running on a subdirectory using Apache has given me some problems with refreshing the page leading to 404 errors, whilst not a total fix, the following rewrite rules have fixed the majority of those problems by redirecting back to the root url
+```
+RewriteEngine On
+RewriteRule (mable/)(.+).com$ "/mable" [R]
+RewriteRule (mable/home/)$ "/mable" [R]
+`````
 
 #### Optional default client settings
 
