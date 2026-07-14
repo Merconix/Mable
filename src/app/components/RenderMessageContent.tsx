@@ -174,18 +174,16 @@ function RenderMessageContentInternal({
             <TweakPreviewUrlCard key={`tweak:${url}`} url={url} />
           ))}
           {toRender.map((item) => {
-            const { url, type } = item;
+            const { url } = item;
             if (themeToRender.includes(url)) return null;
             if (tweakCandidateUrls.includes(url)) return null;
-            if (type) {
-              return <UrlPreviewCard urlPreview key={url} url={url} ts={ts} mediaType={type} />;
-            }
+
             if (!themeChatSableWidgets && isSableChatEmbedCandidate(url)) return null;
             if (clientUrlPreview && youtubeUrl(url)) {
               return <ClientPreview key={url} url={url} />;
             }
             if (urlPreview) {
-              return <UrlPreviewCard urlPreview key={url} url={url} ts={ts} mediaType={type} />;
+              return <UrlPreviewCard urlPreview key={url} url={url} ts={ts} />;
             }
             return null;
           })}

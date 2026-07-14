@@ -215,7 +215,11 @@ export function UserHero({
                 } as CSSProperties),
               }}
             >
-              <Box direction="Row" gap="100" style={{ height: '100%', width: '100%' }}>
+              <Box
+                direction="Row"
+                gap="100"
+                style={{ height: '100%', maxWidth: allowEditing ? toRem(210) : '100%' }}
+              >
                 {isFullStatus ? (
                   <Scroll visibility="Hover" hideTrack style={{ height: '100%', flex: 1 }}>
                     <Text
@@ -224,6 +228,7 @@ export function UserHero({
                         wordBreak: 'break-word',
                         fontStyle: allowEditing && !status ? 'italic' : 'normal',
                       }}
+                      truncate={allowEditing}
                     >
                       {status || (allowEditing && "What's on your mind?")}
                     </Text>
@@ -237,15 +242,15 @@ export function UserHero({
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      fontStyle: allowEditing && !status ? 'italic' : 'normal',
                       opacity: allowEditing && !status ? config.opacity.Placeholder : 1,
                     }}
+                    truncate={allowEditing}
                   >
                     {status || (allowEditing && "What's on your mind?")}
                   </Text>
                 )}
 
-                {isExpandable && (
+                {isExpandable && !allowEditing && (
                   <Box
                     shrink="No"
                     alignItems="Center"
@@ -313,28 +318,34 @@ function UserHeroNameInner({
         )}
       </Box>
       <Box alignItems="Center" gap="100" wrap="Wrap">
-        <Text size="T200" className={classNames(BreakWord, LineClamp3)} title={username}>
-          <Chip
-            onClick={() => {
-              if (username && server) {
-                copyToClipboard(`@${username}:${server}`);
-                isSuccess.current = true;
-              } else isSuccess.current = false;
-              setCopied();
-            }}
-            style={{ backgroundColor: 'transparent', padding: '0' }}
-            onPointerEnter={() => setIsHovered(true)}
-            onPointerLeave={() => setIsHovered(false)}
-            before={`@${username}`}
-            after={
-              copied || isHovered ? (
-                profileIcon(copied ? (isSuccess ? Check : CrossIcon) : CopyIcon)
-              ) : (
-                <></>
-              )
-            }
-          />
-        </Text>
+        <Chip
+          onClick={(evt) => {
+            evt.stopPropagation();
+            if (username && server) {
+              copyToClipboard(`@${username}:${server}`);
+              isSuccess.current = true;
+            } else isSuccess.current = false;
+            setCopied();
+          }}
+          style={{ backgroundColor: 'transparent', color: 'inherit', padding: '0' }}
+          onPointerEnter={() => setIsHovered(true)}
+          onPointerLeave={() => setIsHovered(false)}
+          before={
+            <Text
+              size="T200"
+              className={classNames(BreakWord, LineClamp3)}
+              title={username}
+              truncate
+            >{`@${username}`}</Text>
+          }
+          after={
+            copied || isHovered ? (
+              profileIcon(copied ? (isSuccess ? Check : CrossIcon) : CopyIcon)
+            ) : (
+              <></>
+            )
+          }
+        />
       </Box>
     </Box>
   );

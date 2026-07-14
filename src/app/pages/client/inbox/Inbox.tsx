@@ -23,6 +23,7 @@ import { useInviteCount } from '$hooks/useInviteCount';
 import { BookmarkIcon } from '@phosphor-icons/react';
 import { isResizingSidebarAtom } from '$state/isResizingSidebar';
 import { useSetAtom } from 'jotai';
+import { UserQuickTools } from '../sidebar/UserQuickTools';
 
 function InvitesNavItem({ hideText }: { hideText?: boolean }) {
   const invitesSelected = useInboxInvitesSelected();
@@ -68,6 +69,7 @@ export function Inbox() {
   const setIsResizingSidebar = useSetAtom(isResizingSidebarAtom);
   const [roomSidebarWidth, setRoomSidebarWidth] = useSetting(settingsAtom, 'roomSidebarWidth');
   const [curWidth, setCurWidth] = useState(roomSidebarWidth);
+  const [oldSidebar] = useSetting(settingsAtom, 'oldSidebar');
 
   useEffect(() => {
     setCurWidth(roomSidebarWidth);
@@ -89,7 +91,12 @@ export function Inbox() {
           <Box grow="Yes" gap="300" justifyContent="Center">
             {!hideText ? (
               <Box grow="Yes">
-                <Text size="H4" truncate>
+                <Text
+                  size="H4"
+                  truncate
+                  align={isMobile ? 'Center' : undefined}
+                  style={{ width: '100%' }}
+                >
                   Inbox
                 </Text>
               </Box>
@@ -152,13 +159,14 @@ export function Inbox() {
           setCurWidth={setCurWidth}
           sidebarWidth={roomSidebarWidth}
           setSidebarWidth={setRoomSidebarWidth}
-          instep={80}
+          instep={50}
           outstep={190}
           minValue={50}
           maxValue={500}
           setAnnouncement={setIsResizingSidebar}
         />
       )}
+      {!oldSidebar && !isMobile && <UserQuickTools width={curWidth + 66} compact={false} />}
     </Box>
   );
 }

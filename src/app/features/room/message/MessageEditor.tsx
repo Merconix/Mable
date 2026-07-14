@@ -27,6 +27,7 @@ import {
   RoomMentionAutocomplete,
   UserMentionAutocomplete,
   createEmoticonElement,
+  focusEditor,
   customHtmlEqualsPlainText,
   getAutocompleteQuery,
   getPrevWorldRange,
@@ -365,8 +366,12 @@ export const MessageEditor = as<'div', MessageEditorProps>(
     );
 
     const handleCloseAutocomplete = useCallback(() => {
-      ReactEditor.focus(editor);
-      setAutocompleteQuery(undefined);
+      setAutocompleteQuery((prev) => {
+        if (prev !== undefined) {
+          focusEditor(editor);
+        }
+        return undefined;
+      });
     }, [editor]);
 
     const handleEmoticonSelect = (key: string, shortcode: string) => {

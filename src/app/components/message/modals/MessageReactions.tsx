@@ -7,7 +7,15 @@ import { modalAtom, ModalType } from '$state/modal';
 import * as css from '$features/room/message/styles.css';
 import { ReactionViewer } from '$features/room/reaction-viewer';
 
-export function MessageAllReactionItem({ room, relations }: { room: Room; relations: Relations }) {
+export function MessageAllReactionItem({
+  room,
+  relations,
+  closeMenu,
+}: {
+  room: Room;
+  relations: Relations;
+  closeMenu: () => void;
+}) {
   const setModal = useSetAtom(modalAtom);
 
   return (
@@ -18,6 +26,7 @@ export function MessageAllReactionItem({ room, relations }: { room: Room; relati
       onClick={(e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        closeMenu();
         setModal({
           type: ModalType.Reactions,
           room,

@@ -577,7 +577,8 @@ export function RoomViewHeader({ callView }: Readonly<{ callView?: boolean }>) {
       if (pinnedIds.length === 0) return;
 
       const hash = await getPinsHash(pinnedIds);
-      await mx.setRoomAccountData(room.roomId, CustomAccountDataEvent.SablePinStatus, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await mx.setRoomAccountData(room.roomId, CustomAccountDataEvent.SablePinStatus as any, {
         hash,
         count: pinnedIds.length,
         last_seen_id: pinnedIds.at(-1),

@@ -579,7 +579,7 @@ export function UserRoomProfile({ userId, initialProfile }: Readonly<UserRoomPro
             padding: showCustomHeroCard && innerColor ? config.space.S200 : config.space.S300,
           }}
         >
-          <Box gap="200" alignItems="Center" wrap="Wrap">
+          <Box gap="200" alignItems="Center" wrap="Wrap" style={{ color: textColor }}>
             <UserHeroName
               displayName={displayName}
               userId={userId}

@@ -156,7 +156,7 @@ export function MessageReportInternal({ room, mEvent, onClose }: MessageReportIn
           variant="Critical"
           before={
             reportState.status === AsyncStatus.Loading ? (
-              <Spinner fill="Solid" variant="Critical" size="200" />
+              <Spinner variant="Secondary" size="200" style={{ backgroundColor: 'transparent' }} />
             ) : undefined
           }
           aria-disabled={

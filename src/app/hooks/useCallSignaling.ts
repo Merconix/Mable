@@ -173,8 +173,8 @@ export function useIncomingCallSignaling() {
       }
 
       const myUserId = mx.getSafeUserId();
-      const sessionDescription = mx.matrixRTC.getRoomSession(outgoingRoom).sessionDescription;
-      let remoteJoinedIds = getRemoteRtcMemberUserIds(myUserId, outgoingRoom, sessionDescription);
+      const rtcSession = mx.matrixRTC.getRoomSession(outgoingRoom);
+      let remoteJoinedIds = getRemoteRtcMemberUserIds(myUserId, rtcSession.memberships);
       if (remoteJoinedIds.size === 0) {
         remoteJoinedIds = new Set([decline.senderId]);
       }
@@ -466,7 +466,7 @@ export function useIncomingCallSignaling() {
     const fallbackContext = {
       myUserId,
       getRoom: (roomId: string) => mx.getRoom(roomId),
-      getSessionDescription: (room: Room) => mx.matrixRTC.getRoomSession(room).sessionDescription,
+      getSessionMemberships: (room: Room) => mx.matrixRTC.getRoomSession(room).memberships,
     };
 
     const evaluateIncomingFallback = () => {
@@ -523,9 +523,9 @@ export function useIncomingCallSignaling() {
         return stop();
       }
 
-      const session = mx.matrixRTC.getRoomSession(outgoingRoom).sessionDescription;
+      const rtcSession = mx.matrixRTC.getRoomSession(outgoingRoom);
 
-      if (isCallActive(myUserId, outgoingRoom, session)) {
+      if (isCallActive(myUserId, rtcSession.memberships)) {
         hasCallBeenActiveRef.current = true;
       }
 
@@ -533,7 +533,7 @@ export function useIncomingCallSignaling() {
         return stop();
       }
 
-      const isPending = isOutgoingCallPending(myUserId, outgoingRoom, session);
+      const isPending = isOutgoingCallPending(myUserId, rtcSession.memberships);
       if (!isPending) {
         return stop();
       }

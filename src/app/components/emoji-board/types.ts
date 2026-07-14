@@ -26,4 +26,5 @@ export type GifData = {
   width?: number;
   height?: number;
   size?: number;
+  mimetype?: string;
 };

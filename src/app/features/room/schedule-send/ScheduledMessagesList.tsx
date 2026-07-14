@@ -48,8 +48,9 @@ export function ScheduledMessagesList({ room, onEditMessage }: ScheduledMessages
     enabled: supported,
   });
 
-  const roomEvents = data?.delayed_events.filter(
-    (evt) =>
+  const roomEvents = data?.scheduled?.filter(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (evt: any) =>
       evt.room_id === room.roomId &&
       (evt.type === 'm.room.message' || evt.type === 'm.room.encrypted')
   );
@@ -87,7 +88,8 @@ export function ScheduledMessagesList({ room, onEditMessage }: ScheduledMessages
     [setScheduledTime, setEditingDelayId]
   );
 
-  const visibleEvents = roomEvents?.filter((e) => e.delay_id !== editingDelayId) ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const visibleEvents = roomEvents?.filter((e: any) => e.delay_id !== editingDelayId) ?? [];
 
   if (!supported || visibleEvents.length === 0) {
     return null;
@@ -110,7 +112,8 @@ export function ScheduledMessagesList({ room, onEditMessage }: ScheduledMessages
       </Box>
       {expanded && (
         <Box direction="Column" className={css.ScheduledMessagesPanel}>
-          {visibleEvents.map((evt) => {
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {visibleEvents.map((evt: any) => {
             const deliveryTs = 'delay' in evt ? evt.running_since + evt.delay : evt.running_since;
             const isEncryptedEvt = evt.type === 'm.room.encrypted';
             const body =

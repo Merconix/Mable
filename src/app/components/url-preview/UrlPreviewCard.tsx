@@ -80,19 +80,15 @@ export const UrlPreviewCard = as<
     urlPreview: boolean;
     url: string;
     ts?: number;
-    mediaType?: string | null;
     bundle?: IPreviewUrlResponse;
   }
->(({ urlPreview, url, ts, mediaType, bundle, ...props }, ref) => {
+>(({ urlPreview, url, ts, bundle, ...props }, ref) => {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const [linkPreviewImageMaxHeight] = useSetting(settingsAtom, 'linkPreviewImageMaxHeight');
 
-  const isDirect = !!mediaType;
-
   const [previewStatus, loadPreview] = useAsyncCallback(
     useCallback(() => {
-      if (isDirect) return Promise.resolve(null);
       if (!ts && !bundle) return Promise.resolve(null);
       if (urlPreview && ts) {
         const clientCache = getClientCache(mx);
@@ -104,7 +100,7 @@ export const UrlPreviewCard = as<
         return previewResult;
       }
       return Promise.resolve(bundle);
-    }, [isDirect, ts, bundle, urlPreview, mx, url])
+    }, [ts, bundle, urlPreview, mx, url])
   );
 
   useEffect(() => {
@@ -355,25 +351,9 @@ export const UrlPreviewCard = as<
     <UrlPreview
       {...props}
       ref={ref}
-      style={
-        isDirect
-          ? {
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              boxShadow: 'none',
-              display: 'inline-block',
-              verticalAlign: 'middle',
-              width: 'max-content',
-              minWidth: 0,
-              maxWidth: '100%',
-              margin: 0,
-              alignSelf: 'start',
-            }
-          : {
-              alignSelf: 'start',
-            }
-      }
+      style={{
+        alignSelf: 'start',
+      }}
     >
       {previewContent}
     </UrlPreview>

@@ -552,6 +552,7 @@ export function EmojiBoard({
         width,
         height,
         size: fullRes?.size || preview?.size || 0,
+        mimetype: 'image/gif',
       };
     }, []);
 

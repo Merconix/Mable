@@ -880,7 +880,7 @@ export function Appearance({
 
             <SequenceCard className={SequenceCardStyle} variant="SurfaceVariant" direction="Column">
               <SettingTile
-                title="Show Easter Eggs"
+                title="Allow Whimsy"
                 focusId="show-easter-eggs"
                 description="Lets the interface keep a little mischief turned on."
                 after={

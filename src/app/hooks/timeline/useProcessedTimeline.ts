@@ -16,6 +16,8 @@ import {
   getRedactionTargetEvent,
   collectRelationReactionEvents,
   collectRelationEditEvents,
+  getEditedEvent,
+  getEventReactions,
 } from '$utils/room';
 import { inSameDay, minuteDifference } from '$utils/time';
 import type { ResolvedHiddenEventSettings } from '$state/hooks/settings';
@@ -48,6 +50,9 @@ export interface ProcessedEvent {
   collapsed: boolean;
   willRenderNewDivider: boolean;
   willRenderDayDivider: boolean;
+  editId: string | undefined;
+  reactionsKey: string;
+  content: unknown;
 }
 
 /** Raw timeline indices for skipped events (reactions, edits, …) have no row; walk backward to a visible one. */
@@ -81,7 +86,12 @@ const getPmpId = (ev: MatrixEvent): string | null =>
 
 type ProcessedEventDraft = Omit<
   ProcessedEvent,
-  'collapsed' | 'willRenderNewDivider' | 'willRenderDayDivider'
+  | 'collapsed'
+  | 'willRenderNewDivider'
+  | 'willRenderDayDivider'
+  | 'editId'
+  | 'reactionsKey'
+  | 'content'
 >;
 
 const computeCollapseAndDividers = (
@@ -137,11 +147,19 @@ const computeCollapseAndDividers = (
     if (willRenderNewDivider) newDivider = false;
     if (willRenderDayDivider) dayDivider = false;
 
+    const editId = getEditedEvent(draft.id, mEvent, draft.timelineSet)?.getId();
+    const reactions = getEventReactions(draft.timelineSet, draft.id)?.getSortedAnnotationsByKey();
+    const reactionsKey = reactions ? reactions.map((r) => `${r[0]}:${r[1].size}`).join(',') : '';
+    const content = mEvent.getContent();
+
     return {
       ...draft,
       collapsed,
       willRenderNewDivider,
       willRenderDayDivider,
+      editId,
+      reactionsKey,
+      content,
     };
   });
 };
@@ -492,6 +510,13 @@ export function useProcessedTimeline({
         collapsed,
         willRenderNewDivider,
         willRenderDayDivider,
+        editId: getEditedEvent(mEventId, mEvent, timelineSet)?.getId(),
+        reactionsKey:
+          getEventReactions(timelineSet, mEventId)
+            ?.getSortedAnnotationsByKey()
+            ?.map((r) => `${r[0]}:${r[1].size}`)
+            .join(',') ?? '',
+        content: mEvent.getContent(),
       };
 
       prevEvent = mEvent;

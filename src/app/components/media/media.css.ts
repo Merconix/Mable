@@ -17,6 +17,7 @@ export const ImagePixelated = style({
 export const Video = style([
   DefaultReset,
   {
+    position: 'relative',
     objectFit: 'contain',
     width: '100%',
     height: '100%',

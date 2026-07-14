@@ -1,6 +1,6 @@
 import type { FormEventHandler, MouseEventHandler, ReactNode, RefObject, ChangeEvent } from 'react';
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useNavigate } from 'react-router-dom';
 import type { RectCords } from 'folds';
 import {
@@ -100,6 +100,7 @@ import { useRoomCreators } from '$hooks/useRoomCreators';
 import { useRoomPermissions } from '$hooks/useRoomPermissions';
 import { InviteUserPrompt } from '$components/invite-user-prompt';
 import { CustomAccountDataEvent } from '$types/matrix/accountData';
+import { lastVisitedSpaceIdAtom } from '$state/room/lastSpace';
 
 type SpaceMenuProps = {
   room: Room;
@@ -742,6 +743,7 @@ export function SpaceTabs({ scrollRef }: Readonly<SpaceTabsProps>) {
   const [sidebarItems, localEchoSidebarItem] = useSidebarItems(orphanSpaces);
   const navToActivePath = useAtomValue(useNavToActivePathAtom());
   const [openedFolder, setOpenedFolder] = useAtom(useOpenedSidebarFolderAtom());
+  const setLastSpaceId = useSetAtom(lastVisitedSpaceIdAtom);
   const [draggingItem, setDraggingItem] = useState<SidebarDraggable>();
   const [folderMenuState, setFolderMenuState] = useState<{
     folder: ISidebarFolder;
@@ -914,6 +916,7 @@ export function SpaceTabs({ scrollRef }: Readonly<SpaceTabsProps>) {
     const targetSpaceId = target.getAttribute('data-id');
     if (!targetSpaceId) return;
 
+    setLastSpaceId(targetSpaceId);
     const spacePath = getSpacePath(getCanonicalAliasOrRoomId(mx, targetSpaceId));
     if (screenSize === ScreenSize.Mobile) {
       navigate(spacePath);

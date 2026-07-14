@@ -23,7 +23,9 @@ type inputProps = {
 function FreeInput({ initialValue: current, onSave, onReset, disabled, placeholder }: inputProps) {
   const [val, setVal] = useState(current);
 
-  useEffect(() => setVal(current), [current]);
+  useEffect(() => {
+    setVal(current ?? '');
+  }, [current]);
 
   const handleSave = () => {
     if (val === current) return;
@@ -54,7 +56,10 @@ function FreeInput({ initialValue: current, onSave, onReset, disabled, placehold
             size="300"
             variant="Critical"
             fill="None"
-            onClick={onReset}
+            onClick={() => {
+              onReset();
+              setVal('');
+            }}
             radii="300"
             title="Reset"
             disabled={disabled}
@@ -75,6 +80,7 @@ export function AnimalCosmetics({ profile, userId }: Readonly<AnimalCosmeticsPro
   const mx = useMatrixClient();
   const setGlobalProfiles = useSetAtom(profilesCacheAtom);
   const [renderAnimals, setRenderAnimals] = useSetting(settingsAtom, 'renderAnimals');
+  const [, setAnimalKind] = useSetting(settingsAtom, 'animalKind');
 
   const isAnimal = profile.isAnimal;
   const hasAnimal = profile.hasAnimal;
@@ -104,6 +110,7 @@ export function AnimalCosmetics({ profile, userId }: Readonly<AnimalCosmeticsPro
           prefix.MATRIX_SABLE_UNSTABLE_ANIMAL_IDENTITY_IS_ANIMAL_PROPERTY_NAME,
           'cat'
         );
+        setAnimalKind('cat');
       }
       const hasCats = profile.hasCats;
       if (typeof hasCats === 'boolean') {
@@ -118,7 +125,7 @@ export function AnimalCosmetics({ profile, userId }: Readonly<AnimalCosmeticsPro
       }
     };
     asyncClean();
-  }, [handleSaveField, profile.hasCats, profile.isCat]);
+  }, [handleSaveField, profile, setAnimalKind]);
 
   return (
     <Box direction="Column" gap="100">
@@ -139,18 +146,20 @@ export function AnimalCosmetics({ profile, userId }: Readonly<AnimalCosmeticsPro
           after={
             <FreeInput
               initialValue={isAnimal}
-              onSave={(newValue) =>
+              onSave={(newValue) => {
                 handleSaveField(
                   prefix.MATRIX_SABLE_UNSTABLE_ANIMAL_IDENTITY_IS_ANIMAL_PROPERTY_NAME,
                   newValue
-                )
-              }
-              onReset={() =>
+                );
+                if (typeof newValue === 'string') setAnimalKind(newValue);
+              }}
+              onReset={() => {
                 handleSaveField(
                   prefix.MATRIX_SABLE_UNSTABLE_ANIMAL_IDENTITY_IS_ANIMAL_PROPERTY_NAME,
                   null
-                )
-              }
+                );
+                setAnimalKind(undefined);
+              }}
               placeholder="bunny..."
             />
           }

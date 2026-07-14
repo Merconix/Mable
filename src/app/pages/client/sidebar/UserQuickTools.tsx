@@ -1,26 +1,21 @@
 import { Box, config, toRem } from 'folds';
 import { InboxTab } from './InboxTab';
-import { SearchTab } from './SearchTab';
+import { NavigateTab } from './NavigateTab';
 import { SettingsTab } from './SettingsTab';
-import { UnverifiedTab } from './UnverifiedTab';
-import { useAtom } from 'jotai';
-import { isResizingSidebarAtom } from '$state/isResizingSidebar';
 import * as css from './UserQuickTools.css';
-import { ScreenSize, useScreenSizeContext } from '$hooks/useScreenSize';
 import { UserMenuTab } from './UserMenuTab';
+import { MessageTab } from './MessageTab';
 
 export function UserQuickTools({
   width,
+  compact,
 }: {
   isCollapsed?: boolean;
   underOutstep?: boolean;
-  width: number;
+  width?: number;
+  compact: boolean;
 }) {
-  const screenSize = useScreenSizeContext();
-  const compact = screenSize === ScreenSize.Mobile;
-
-  const [isResizingSidebar] = useAtom(isResizingSidebarAtom);
-  const isCollapsed = compact ? false : width < 190 + 66;
+  const isCollapsed = compact ? false : (width ?? 0) < 190 + 66;
 
   return (
     <>
@@ -29,31 +24,53 @@ export function UserQuickTools({
         <div style={{ position: 'relative' }}>
           <Box
             direction="Row"
-            justifyContent="SpaceBetween"
+            justifyContent={compact ? 'SpaceAround' : 'SpaceBetween'}
             alignItems="Center"
             className={css.UserQuickTools}
-            style={{
-              opacity: isResizingSidebar ? '0%' : '100%',
-              transition: isResizingSidebar ? 'opacity 0.2s ease' : 'opacity 0.5s ease',
-              width: compact ? '100vw' : toRem(width),
-              paddingRight: config.space.S300,
-            }}
+            style={
+              compact
+                ? {
+                    borderTopLeftRadius: config.radii.R500,
+                    borderTopRightRadius: config.radii.R500,
+                    width: '100vw',
+                  }
+                : {
+                    width: toRem(width ?? 100),
+                    position: 'absolute',
+                    right: '0',
+                    padding: `0 ${config.space.S300}`,
+                  }
+            }
           >
-            <UserMenuTab isBottom />
-            <Box
-              style={{
-                gap: config.space.S300,
-              }}
-            >
-              {!isCollapsed && (
-                <>
-                  <UnverifiedTab isBottom />
-                  <InboxTab isBottom />
-                  <SearchTab isBottom />
-                  <SettingsTab isBottom />
-                </>
-              )}
-            </Box>
+            {compact ? (
+              <>
+                <MessageTab isBottom isMobile />
+                <InboxTab isBottom isMobile />
+                <NavigateTab isBottom isMobile />
+                <Box style={{ paddingTop: config.space.S0 }}>
+                  <UserMenuTab isBottom isMobile />
+                </Box>
+              </>
+            ) : (
+              <>
+                <UserMenuTab isBottom />
+                <Box
+                  shrink="No"
+                  grow="No"
+                  style={{
+                    gap: config.space.S300,
+                  }}
+                >
+                  {!isCollapsed && (
+                    <>
+                      <InboxTab isBottom />
+                      <NavigateTab isBottom />
+                      <SettingsTab isBottom />
+                    </>
+                  )}
+                </Box>
+              </>
+            )}
           </Box>
         </div>
       )}

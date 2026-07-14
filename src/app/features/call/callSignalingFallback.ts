@@ -1,6 +1,6 @@
 import type { IncomingCall } from '$state/callEmbed';
 import type { Room } from '$types/matrix-sdk';
-import type { SessionDescription } from './callMembershipState';
+
 import { isIncomingCallActive } from './callMembershipState';
 import { INCOMING_MEMBERSHIP_GRACE_MS } from './callSignalingPolicy';
 
@@ -11,7 +11,7 @@ export type IncomingFallbackAction =
 export type IncomingFallbackContext = {
   myUserId: string;
   getRoom: (roomId: string) => Room | null | undefined;
-  getSessionDescription: (room: Room) => SessionDescription;
+  getSessionMemberships: (room: Room) => { userId?: string; sender?: string }[];
   isIncomingActive?: typeof isIncomingCallActive;
 };
 
@@ -26,9 +26,9 @@ export const evaluateIncomingCallFallback = (
   const incomingRoom = context.getRoom(incoming.roomId);
   if (!incomingRoom) return { kind: 'clear', reason: 'missing_room' };
 
-  const sessionDescription = context.getSessionDescription(incomingRoom);
+  const memberships = context.getSessionMemberships(incomingRoom);
   const isIncomingActive = context.isIncomingActive ?? isIncomingCallActive;
-  if (isIncomingActive(context.myUserId, incomingRoom, sessionDescription)) {
+  if (isIncomingActive(context.myUserId, memberships)) {
     return { kind: 'none' };
   }
 

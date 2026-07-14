@@ -1,8 +1,3 @@
-import { MatrixRTCSession } from '$types/matrix-sdk';
-import type { Room } from '$types/matrix-sdk';
-
-export type SessionDescription = Parameters<typeof MatrixRTCSession.sessionMembershipsForRoom>[1];
-
 type RtcMembership = { userId?: string; sender?: string };
 
 export type CallMembershipPresence = {
@@ -10,15 +5,10 @@ export type CallMembershipPresence = {
   remoteMemberCount: number;
 };
 
-const getRoomMemberships = (room: Room, sessionDescription: SessionDescription) =>
-  MatrixRTCSession.sessionMembershipsForRoom(room, sessionDescription) as RtcMembership[];
-
 export const getCallMembershipPresence = (
   mxUserId: string,
-  room: Room,
-  sessionDescription: SessionDescription
+  memberships: RtcMembership[]
 ): CallMembershipPresence => {
-  const memberships = getRoomMemberships(room, sessionDescription);
   const remoteMemberCount = memberships.filter(
     (membership) => (membership.userId || membership.sender) !== mxUserId
   ).length;
@@ -29,54 +19,28 @@ export const getCallMembershipPresence = (
   return { hasSelfMember, remoteMemberCount };
 };
 
-export const isIncomingCallActive = (
-  mxUserId: string,
-  room: Room,
-  sessionDescription: SessionDescription
-): boolean => {
-  const { hasSelfMember, remoteMemberCount } = getCallMembershipPresence(
-    mxUserId,
-    room,
-    sessionDescription
-  );
+export const isIncomingCallActive = (mxUserId: string, memberships: RtcMembership[]): boolean => {
+  const { hasSelfMember, remoteMemberCount } = getCallMembershipPresence(mxUserId, memberships);
 
   return remoteMemberCount > 0 && !hasSelfMember;
 };
 
-export const isCallActive = (
-  mxUserId: string,
-  room: Room,
-  sessionDescription: SessionDescription
-): boolean => {
-  const { hasSelfMember, remoteMemberCount } = getCallMembershipPresence(
-    mxUserId,
-    room,
-    sessionDescription
-  );
+export const isCallActive = (mxUserId: string, memberships: RtcMembership[]): boolean => {
+  const { hasSelfMember, remoteMemberCount } = getCallMembershipPresence(mxUserId, memberships);
 
   return hasSelfMember && remoteMemberCount > 0;
 };
 
-export const isOutgoingCallPending = (
-  mxUserId: string,
-  room: Room,
-  sessionDescription: SessionDescription
-): boolean => {
-  const { hasSelfMember, remoteMemberCount } = getCallMembershipPresence(
-    mxUserId,
-    room,
-    sessionDescription
-  );
+export const isOutgoingCallPending = (mxUserId: string, memberships: RtcMembership[]): boolean => {
+  const { hasSelfMember, remoteMemberCount } = getCallMembershipPresence(mxUserId, memberships);
 
   return hasSelfMember && remoteMemberCount === 0;
 };
 
 export const getRemoteRtcMemberUserIds = (
   mxUserId: string,
-  room: Room,
-  sessionDescription: SessionDescription
+  memberships: RtcMembership[]
 ): Set<string> => {
-  const memberships = getRoomMemberships(room, sessionDescription);
   return new Set(
     memberships
       .map((membership) => membership.userId || membership.sender)

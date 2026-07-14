@@ -109,6 +109,7 @@ import { ModalWide } from '$styles/Modal.css';
 import { ImageViewer } from '$components/image-viewer';
 import * as css from './styles.css';
 import { isResizingSidebarAtom } from '$state/isResizingSidebar';
+import { UserQuickTools } from '../sidebar/UserQuickTools';
 
 const debugLog = createDebugLogger('Space');
 
@@ -859,6 +860,8 @@ export function Space() {
   const screenSize = useScreenSizeContext();
   const isMobile = screenSize === ScreenSize.Mobile;
   const hideText = curWidth <= 80 && !isMobile;
+  const [oldSidebar] = useSetting(settingsAtom, 'oldSidebar');
+
   return (
     <Box
       shrink="No"
@@ -1047,7 +1050,7 @@ export function Space() {
                 })}
                 {getConnectorSVG(hierarchy, virtualizedItems)}
               </NavCategory>
-              <div style={{ height: toRem(40) }} />
+              {!isMobile && <div style={{ height: toRem(40) }} />}
             </Box>
           </PageNavContent>
         </SwipeableOverlayWrapper>
@@ -1057,13 +1060,14 @@ export function Space() {
           setCurWidth={setCurWidth}
           sidebarWidth={roomSidebarWidth}
           setSidebarWidth={setRoomSidebarWidth}
-          instep={80}
+          instep={50}
           outstep={190}
           minValue={50}
           maxValue={500}
           setAnnouncement={setIsResizingSidebar}
         />
       )}
+      {!oldSidebar && !isMobile && <UserQuickTools width={curWidth + 66} compact={false} />}
     </Box>
   );
 }

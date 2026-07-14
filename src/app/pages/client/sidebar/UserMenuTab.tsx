@@ -2,24 +2,27 @@ import type { MouseEventHandler } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import type { RectCords } from 'folds';
 import {
+  Badge,
   Box,
   Button,
   Chip,
   Dialog,
   Header,
-  Icon,
-  Icons,
   Line,
   Menu,
   MenuItem,
+  Overlay,
+  OverlayBackdrop,
+  OverlayCenter,
   PopOut,
   Spinner,
   Text,
+  color,
   config,
   toRem,
 } from 'folds';
-import FocusTrap from 'focus-trap-react';
-import { SidebarAvatar, SidebarItem, SidebarItemTooltip } from '../../../components/sidebar';
+import { FocusTrap } from 'focus-trap-react';
+import { SidebarAvatar, SidebarItem, SidebarItemBadge } from '../../../components/sidebar';
 import { UserAvatar } from '../../../components/user-avatar';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
 import { getMxIdLocalPart, mxcUrlToHttp } from '../../../utils/matrix';
@@ -27,7 +30,6 @@ import { nameInitials } from '../../../utils/common';
 import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
 import { useOpenSettings } from '../../../features/settings';
 import { useUserProfile } from '../../../hooks/useUserProfile';
-import { Modal500 } from '../../../components/Modal500';
 import { stopPropagation } from '../../../utils/keyboard';
 import { useUserPresence, Presence } from '../../../hooks/useUserPresence';
 import { UserHero, GlobalUserHeroName } from '../../../components/user-profile/UserHero';
@@ -36,18 +38,34 @@ import { createLogger } from '$utils/debug';
 import type { Session } from '$state/sessions';
 import { activeSessionIdAtom, backgroundUnreadCountsAtom, sessionsAtom } from '$state/sessions';
 import { UnreadBadge, UnreadBadgeCenter } from '$components/unread-badge';
-import { Check, chipIcon, Plus } from '$components/icons/phosphor';
+import { Check, chipIcon, menuIcon, Plus } from '$components/icons/phosphor';
 import { useSessionProfiles } from '$hooks/useSessionProfiles';
 import { useClientConfig } from '$hooks/useClientConfig';
-import { getHomePath, getLoginPath, withSearchParam } from '$pages/pathUtils';
+import { getHomePath, getLoginPath, getProfilePath, withSearchParam } from '$pages/pathUtils';
 import { initClient, logoutClient, stopClient } from '$client/initMatrix';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useNavigate } from 'react-router-dom';
 import { useFocusWithin, useHover } from 'react-aria';
-import { ScreenSize, useScreenSizeContext } from '$hooks/useScreenSize';
 import { setUserPresence } from '$utils/presence';
 import { useSetting } from '$state/hooks/settings';
 import { settingsAtom } from '$state/settings';
+import { useProfileSelected } from '$hooks/router/useProfileSelected';
+import { useDeviceIds, useDeviceList, useSplitCurrentDevice } from '$hooks/useDeviceList';
+import {
+  useDeviceVerificationStatus,
+  useUnverifiedDeviceCount,
+  VerificationStatus,
+} from '$hooks/useDeviceVerificationStatus';
+import {
+  CaretDownIcon,
+  CaretRightIcon,
+  GearSixIcon,
+  PencilSimpleIcon,
+  ShieldWarningIcon,
+  UserIcon,
+} from '@phosphor-icons/react';
+import * as css from './UserMenuTab.css';
+import { getMxIdServer } from '$utils/mxIdHelper';
 
 const log = createLogger('AccountSwitcherTab');
 
@@ -57,6 +75,7 @@ function AccountRow({
   displayName,
   avatarUrl,
   isBusy,
+  isMobile,
   unread,
   onSwitch,
   onSignOut,
@@ -66,6 +85,7 @@ function AccountRow({
   displayName?: string;
   avatarUrl?: string;
   isBusy?: boolean;
+  isMobile?: boolean;
   unread?: { total: number; highlight: number };
   onSwitch: (session: Session) => void;
   onSignOut: (session: Session) => void;
@@ -81,6 +101,7 @@ function AccountRow({
       style={{
         opacity: isBusy ? 0.6 : undefined,
         height: 'auto',
+        background: isMobile ? color.Background.Container : undefined,
       }}
       before={
         <SidebarAvatar size="200" style={{ width: toRem(28), height: toRem(28) }}>
@@ -140,7 +161,7 @@ function AccountRow({
   );
 }
 
-export function AccountMenuOption() {
+export function AccountMenuOption({ isMobile, isRight }: { isMobile: boolean; isRight?: boolean }) {
   const mx = useMatrixClient();
   const navigate = useNavigate();
   const sessions = useAtomValue(sessionsAtom);
@@ -149,8 +170,6 @@ export function AccountMenuOption() {
   const useAuthentication = useMediaAuthentication();
   const backgroundUnreads = useAtomValue(backgroundUnreadCountsAtom);
   const setBackgroundUnreads = useSetAtom(backgroundUnreadCountsAtom);
-  const screenSize = useScreenSizeContext();
-  const isMobile = screenSize === ScreenSize.Mobile;
 
   const [isOpen, setIsOpen] = useState(false);
   const { hoverProps } = useHover({
@@ -251,12 +270,15 @@ export function AccountMenuOption() {
         <MenuItem
           size="300"
           radii="300"
-          before={<Icon size="100" src={Icons.User} />}
-          after={
-            <Icon size="100" src={isOpen && isMobile ? Icons.ChevronBottom : Icons.ChevronRight} />
-          }
+          before={menuIcon(UserIcon)}
+          after={isOpen && isMobile ? menuIcon(CaretDownIcon) : menuIcon(CaretRightIcon)}
           style={{
             position: 'relative',
+            background: isMobile
+              ? color.Background.Container
+              : isOpen
+                ? color.Secondary.Container
+                : color.Surface.Container,
           }}
           onClick={() => isMobile && setIsOpen(!isOpen)}
           {...hoverProps}
@@ -277,9 +299,10 @@ export function AccountMenuOption() {
               : {
                   minWidth: toRem(240),
                   position: 'absolute',
-                  left: '98%',
+                  left: isRight ? undefined : '98%',
+                  right: isRight ? '98%' : undefined,
                   padding: toRem(15),
-                  bottom: toRem(25),
+                  bottom: toRem(-15),
                 }
           }
         >
@@ -290,6 +313,7 @@ export function AccountMenuOption() {
                     border: 0,
                     boxShadow: 'none',
                     gap: 0,
+                    background: color.Background.Container,
                   }
                 : {}
             }
@@ -320,10 +344,17 @@ export function AccountMenuOption() {
                     onSignOut={(pendingSession) => {
                       setConfirmSignOutSession(pendingSession);
                     }}
+                    isMobile={isMobile}
                   />
                 );
               })}
-              <MenuItem size="300" radii="300" before={chipIcon(Plus)} onClick={handleAddAccount}>
+              <MenuItem
+                size="300"
+                radii="300"
+                before={chipIcon(Plus)}
+                onClick={handleAddAccount}
+                style={{ background: isMobile ? color.Background.Container : undefined }}
+              >
                 <Text size="T300">Add Account</Text>
               </MenuItem>
             </Box>
@@ -331,41 +362,51 @@ export function AccountMenuOption() {
         </div>
       )}
       {confirmSignOutSession && (
-        <Modal500 requestClose={() => setConfirmSignOutSession(undefined)}>
-          <Dialog variant="Surface">
-            <Header
-              style={{
-                padding: `0 ${config.space.S200} 0 ${config.space.S400}`,
-                borderBottomWidth: config.borderWidth.B300,
+        <Overlay open backdrop={<OverlayBackdrop />}>
+          <OverlayCenter>
+            <FocusTrap
+              focusTrapOptions={{
+                initialFocus: false,
+                onDeactivate: () => setConfirmSignOutSession(undefined),
+                clickOutsideDeactivates: true,
               }}
-              variant="Surface"
-              size="500"
             >
-              <Box grow="Yes">
-                <Text size="H4">Sign out</Text>
-              </Box>
-            </Header>
-            <Box style={{ padding: config.space.S400 }} direction="Column" gap="400">
-              <Text priority="400">
-                Are you sure you want to sign out of <b>{confirmSignOutSession.userId}</b>?
-              </Text>
-              <Box direction="Column" gap="200">
-                <Button
-                  variant="Critical"
-                  onClick={() => {
-                    handleSignOut(confirmSignOutSession);
-                    setConfirmSignOutSession(undefined);
+              <Dialog variant="Surface">
+                <Header
+                  style={{
+                    padding: `0 ${config.space.S200} 0 ${config.space.S400}`,
+                    borderBottomWidth: config.borderWidth.B300,
                   }}
+                  variant="Surface"
+                  size="500"
                 >
-                  <Text size="B400">Sign out</Text>
-                </Button>
-                <Button variant="Secondary" onClick={() => setConfirmSignOutSession(undefined)}>
-                  <Text size="B400">Cancel</Text>
-                </Button>
-              </Box>
-            </Box>
-          </Dialog>
-        </Modal500>
+                  <Box grow="Yes">
+                    <Text size="H4">Sign out</Text>
+                  </Box>
+                </Header>
+                <Box style={{ padding: config.space.S400 }} direction="Column" gap="400">
+                  <Text priority="400">
+                    Are you sure you want to sign out of <b>{confirmSignOutSession.userId}</b>?
+                  </Text>
+                  <Box direction="Column" gap="200">
+                    <Button
+                      variant="Critical"
+                      onClick={() => {
+                        handleSignOut(confirmSignOutSession);
+                        setConfirmSignOutSession(undefined);
+                      }}
+                    >
+                      <Text size="B400">Sign out</Text>
+                    </Button>
+                    <Button variant="Secondary" onClick={() => setConfirmSignOutSession(undefined)}>
+                      <Text size="B400">Cancel</Text>
+                    </Button>
+                  </Box>
+                </Box>
+              </Dialog>
+            </FocusTrap>
+          </OverlayCenter>
+        </Overlay>
       )}
     </>
   );
@@ -377,17 +418,22 @@ const PresenceOptions: Array<{ value: Presence; label: string }> = [
   { value: Presence.Offline, label: 'Offline' },
 ];
 
-export function PresenceMenuOption() {
+export function PresenceMenuOption({
+  isMobile,
+  isRight,
+}: {
+  isMobile: boolean;
+  isRight?: boolean;
+}) {
   const mx = useMatrixClient();
   const [sendPresence] = useSetting(settingsAtom, 'sendPresence');
 
   const userId = mx.getUserId() ?? '';
   const presence = useUserPresence(userId);
-  const screenSize = useScreenSizeContext();
-  const isMobile = screenSize === ScreenSize.Mobile;
   const currentPresence = presence?.presence ?? Presence.Online;
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(isMobile);
+
   const { hoverProps } = useHover({
     onHoverChange: (h) => {
       if (!isMobile) setIsOpen(h);
@@ -435,7 +481,7 @@ export function PresenceMenuOption() {
               display: 'flex',
               justifyContent: 'center',
               alignContent: 'center',
-              width: 18,
+              width: toRem(20),
             }}
           >
             {savingStatus ? (
@@ -449,11 +495,14 @@ export function PresenceMenuOption() {
             )}
           </div>
         }
-        after={
-          <Icon size="100" src={isOpen && isMobile ? Icons.ChevronBottom : Icons.ChevronRight} />
-        }
+        after={isOpen && isMobile ? menuIcon(CaretDownIcon) : menuIcon(CaretRightIcon)}
         style={{
           position: 'relative',
+          background: isMobile
+            ? color.Background.Container
+            : isOpen
+              ? color.Secondary.Container
+              : color.Surface.Container,
         }}
         onClick={() => isMobile && setIsOpen(!isOpen)}
         {...hoverProps}
@@ -473,9 +522,10 @@ export function PresenceMenuOption() {
               : {
                   minWidth: toRem(240),
                   position: 'absolute',
-                  left: '98%',
+                  left: isRight ? undefined : '98%',
+                  right: isRight ? '98%' : undefined,
                   padding: toRem(15),
-                  bottom: toRem(65),
+                  bottom: toRem(25),
                 }
           }
         >
@@ -486,6 +536,7 @@ export function PresenceMenuOption() {
                     border: 0,
                     boxShadow: 'none',
                     gap: 0,
+                    background: color.Background.Container,
                   }
                 : {}
             }
@@ -525,18 +576,85 @@ export function PresenceMenuOption() {
   );
 }
 
-export function UserMenuTab({ isBottom }: { isBottom?: boolean }) {
+export function useIsUnverified() {
   const mx = useMatrixClient();
+
+  const crypto = mx.getCrypto();
+  const [devices] = useDeviceList();
+
+  const [currentDevice] = useSplitCurrentDevice(devices);
+
+  const verificationStatus = useDeviceVerificationStatus(
+    crypto,
+    mx.getSafeUserId(),
+    currentDevice?.device_id
+  );
+  const unverified = verificationStatus === VerificationStatus.Unverified;
+  return unverified;
+}
+
+export function useUnverifiedDevices() {
+  const mx = useMatrixClient();
+
+  const crypto = mx.getCrypto();
+  const [devices] = useDeviceList();
+
+  const devicesId = useDeviceIds(devices);
+  const unverifiedDeviceCount = useUnverifiedDeviceCount(crypto, mx.getSafeUserId(), devicesId);
+  return unverifiedDeviceCount;
+}
+
+export function UnverifiedMenuOption() {
+  const openSettings = useOpenSettings();
+  const [reducedMotion] = useSetting(settingsAtom, 'reducedMotion');
+
+  const unverifiedDeviceCount = useUnverifiedDevices();
+  const unverified = useIsUnverified();
+
+  const hasUnverified = (unverifiedDeviceCount ?? 0) > 0;
+
+  return (
+    <>
+      {hasUnverified && (
+        <MenuItem
+          className={
+            !reducedMotion
+              ? css.UnverifiedDevices({ critical: unverified })
+              : css.UnverifiedDevicesReduced({ critical: unverified })
+          }
+          size="300"
+          radii="300"
+          before={<ShieldWarningIcon size={20} />}
+          onClick={() => openSettings('devices')}
+        >
+          <Text style={{ flexGrow: 1 }} size="T300">
+            {`Verify ${unverified ? 'this' : 'your'} device${!unverified && (unverifiedDeviceCount ?? 0) > 1 ? 's' : ''}`}
+          </Text>
+        </MenuItem>
+      )}
+    </>
+  );
+}
+
+export function UserMenuTab({ isBottom, isMobile }: { isBottom?: boolean; isMobile?: boolean }) {
+  const mx = useMatrixClient();
+  const [oldSidebar] = useSetting(settingsAtom, 'oldSidebar');
   const useAuthentication = useMediaAuthentication();
+  const profileSelected = useProfileSelected();
+  const navigate = useNavigate();
 
   const userId = mx.getUserId() ?? '';
+  const server = getMxIdServer(userId);
   const profile = useUserProfile(userId);
   const presence = useUserPresence(userId);
-  const currentStatus = presence?.status ?? '';
   const currentPresence = presence?.presence ?? Presence.Online;
 
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const openSettings = useOpenSettings();
+
+  const unverifiedDeviceCount = useUnverifiedDevices();
+  const unverified = useIsUnverified();
+  const hasUnverified = (unverifiedDeviceCount ?? 0) > 0;
 
   const displayName = profile.displayName ?? getMxIdLocalPart(userId) ?? userId;
   const avatarUrl = profile.avatarUrl
@@ -552,32 +670,69 @@ export function UserMenuTab({ isBottom }: { isBottom?: boolean }) {
     ? (mxcUrlToHttp(mx, parsedBanner, useAuthentication, 640, 192, 'scale') ?? undefined)
     : undefined;
 
-  const handleToggle: MouseEventHandler<HTMLButtonElement> = (evt) => {
+  const handleToggle: MouseEventHandler<HTMLButtonElement | HTMLDivElement> = (evt) => {
+    if (isMobile) {
+      navigate(getProfilePath());
+      return;
+    }
+
     const cords = evt.currentTarget.getBoundingClientRect();
-    setMenuAnchor((cur) => (cur ? undefined : cords));
+    setMenuAnchor(() => cords);
   };
 
   const handleCloseMenu = () => setMenuAnchor(undefined);
 
+  const isActive = (!!menuAnchor || profileSelected) && !isMobile;
+
   return (
-    <SidebarItem active={!!menuAnchor} isBottom={isBottom}>
-      <SidebarItemTooltip tooltip={currentStatus || displayName}>
-        {(triggerRef) => (
-          <AvatarPresence
-            ref={triggerRef}
-            badge={<PresenceBadge presence={currentPresence} size="200" />}
-          >
-            <SidebarAvatar as="button" onClick={handleToggle}>
-              <UserAvatar
-                userId={userId}
-                src={avatarUrl}
-                alt={userId}
-                renderFallback={() => <Text size="H4">{nameInitials(displayName)}</Text>}
-              />
-            </SidebarAvatar>
-          </AvatarPresence>
+    <SidebarItem active={isActive} isBottom={isBottom}>
+      <Box
+        direction="Column"
+        alignItems="Center"
+        onClick={handleToggle}
+        style={
+          isMobile
+            ? {
+                height: '100%',
+                justifyContent: 'Center',
+                paddingTop: config.space.S100,
+                gap: config.space.S100,
+              }
+            : {}
+        }
+      >
+        <AvatarPresence badge={<PresenceBadge presence={currentPresence} size="200" />}>
+          <SidebarAvatar size={isMobile ? '300' : '400'} as="button" onClick={handleToggle}>
+            <UserAvatar
+              userId={userId}
+              src={avatarUrl}
+              alt={userId}
+              renderFallback={() => <Text size="H4">{nameInitials(displayName)}</Text>}
+            />
+          </SidebarAvatar>
+        </AvatarPresence>
+        {isMobile && (
+          <Text size="B300" priority="300">
+            Account
+          </Text>
         )}
-      </SidebarItemTooltip>
+      </Box>
+
+      {hasUnverified && (
+        <SidebarItemBadge mode="count">
+          <Badge
+            variant={unverified ? 'Critical' : 'Warning'}
+            size="300"
+            fill="Solid"
+            radii="Pill"
+            outlined={false}
+          >
+            <Text as="span" size="L400">
+              {unverifiedDeviceCount}
+            </Text>
+          </Badge>
+        </SidebarItemBadge>
+      )}
 
       <PopOut
         anchor={menuAnchor}
@@ -596,7 +751,7 @@ export function UserMenuTab({ isBottom }: { isBottom?: boolean }) {
               escapeDeactivates: stopPropagation,
             }}
           >
-            <Menu style={{ minWidth: toRem(320) }}>
+            <Menu style={{ width: toRem(320) }}>
               <Box direction="Column" gap="0">
                 <Box direction="Column" gap="200">
                   <UserHero
@@ -607,44 +762,53 @@ export function UserMenuTab({ isBottom }: { isBottom?: boolean }) {
                     showColor={false}
                     allowEditing={true}
                   />
-                  <Box style={{ padding: `0 ${config.space.S200} ${config.space.S200}` }}>
-                    <GlobalUserHeroName displayName={displayName} userId={userId} />
+                  <Box style={{ padding: `0 ${config.space.S400} 0` }}>
+                    <GlobalUserHeroName displayName={displayName} userId={userId} server={server} />
                   </Box>
                 </Box>
 
-                <Line variant="Surface" size="300" />
-
                 <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+                  <UnverifiedMenuOption />
                   <MenuItem
                     onClick={() => openSettings('account')}
                     size="300"
                     radii="300"
-                    before={<Icon size="100" src={Icons.Pencil} />}
+                    before={menuIcon(PencilSimpleIcon)}
                   >
                     <Text style={{ flexGrow: 1 }} size="T300">
                       Edit Profile
                     </Text>
                   </MenuItem>
-
-                  <PresenceMenuOption />
                 </Box>
-
-                <AccountMenuOption />
-
                 <Line variant="Surface" size="300" />
-
                 <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
-                  <MenuItem
-                    size="300"
-                    radii="300"
-                    before={<Icon size="100" src={Icons.Setting} />}
-                    onClick={() => openSettings()}
-                  >
-                    <Text style={{ flexGrow: 1 }} size="T300">
-                      Settings
-                    </Text>
-                  </MenuItem>
+                  <PresenceMenuOption
+                    isMobile={isMobile ?? false}
+                    isRight={(menuAnchor?.x ?? 0) > window.innerWidth / 2}
+                  />
                 </Box>
+
+                <AccountMenuOption
+                  isMobile={isMobile ?? false}
+                  isRight={(menuAnchor?.x ?? 0) > window.innerWidth / 2}
+                />
+                {(oldSidebar || isMobile) && (
+                  <>
+                    <Line variant="Surface" size="300" />
+                    <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+                      <MenuItem
+                        size="300"
+                        radii="300"
+                        before={menuIcon(GearSixIcon)}
+                        onClick={() => openSettings()}
+                      >
+                        <Text style={{ flexGrow: 1 }} size="T300">
+                          Settings
+                        </Text>
+                      </MenuItem>
+                    </Box>
+                  </>
+                )}
               </Box>
             </Menu>
           </FocusTrap>

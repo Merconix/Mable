@@ -283,13 +283,22 @@ const pruneInvalidEmptyElements = (
   });
 };
 
+let purifyInstance: ReturnType<typeof DOMPurify> | undefined;
+function getPurify(): ReturnType<typeof DOMPurify> {
+  if (!purifyInstance) {
+    purifyInstance = DOMPurify(window);
+  }
+  return purifyInstance;
+}
+
 export const sanitizeCustomHtml = (customHtml: string): string => {
   if (typeof window === 'undefined') {
     return sanitizeText(customHtml);
   }
 
   const { protectedHtml, protectedSources } = protectImageSources(customHtml);
-  const purify = DOMPurify(window);
+  const purify = getPurify();
+  purify.removeAllHooks();
   const allowedHtmlAttributes = [...permittedHtmlAttributes, INTERNAL_IMG_SRC_ATTR];
 
   purify.addHook('uponSanitizeAttribute', (currentNode, hookEvent) => {

@@ -1,4 +1,4 @@
-import type { CallMembership, SessionMembershipData } from '$types/matrix-sdk';
+import type { CallMembership } from '$types/matrix-sdk';
 import { useState } from 'react';
 import { Avatar, Box, Text } from 'folds';
 import {
@@ -20,7 +20,7 @@ import { getMouseEventCords } from '../../utils/dom';
 import * as css from './styles.css';
 
 interface MemberWithMembershipData {
-  membershipData?: SessionMembershipData & {
+  membershipData?: Record<string, unknown> & {
     'm.call.intent': 'video' | 'audio';
   };
 }

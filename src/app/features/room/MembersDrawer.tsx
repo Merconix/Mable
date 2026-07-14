@@ -347,7 +347,7 @@ export function MembersDrawer({ room, members }: MembersDrawerProps) {
             setCurWidth={setCurWidth}
             sidebarWidth={memberSidebarWidth}
             setSidebarWidth={setMemberSidebarWidth}
-            instep={64}
+            instep={50}
             outstep={176}
             minValue={50}
             maxValue={350}

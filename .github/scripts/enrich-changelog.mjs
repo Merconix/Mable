@@ -221,7 +221,13 @@ async function updateReleasePullRequest(token, owner, repo, contributorCache, dr
   }
 
   const releasePr = openPulls[0];
-  const enrichedBody = await enrichText(token, owner, repo, releasePr.body ?? '', contributorCache);
+  let enrichedBody = await enrichText(token, owner, repo, releasePr.body ?? '', contributorCache);
+
+  const devLinkMessage =
+    '> **Preview the next release on [dev.sable.moe](https://dev.sable.moe)**\n\n';
+  if (!enrichedBody.includes('dev.sable.moe')) {
+    enrichedBody = devLinkMessage + enrichedBody;
+  }
 
   if (dryRun) {
     console.log('--- release PR body (dry run) ---\n');

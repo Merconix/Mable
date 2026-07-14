@@ -12,7 +12,7 @@ import type {
 } from '$types/matrix-sdk';
 import type { IImageContent } from '$types/matrix/common';
 import { NotificationCountType, RoomEvent, ThreadEvent, EventType } from '$types/matrix-sdk';
-import type { SessionMembershipData } from '$types/matrix-sdk';
+
 import type { HTMLReactParserOptions } from 'html-react-parser';
 import type { Opts as LinkifyOpts } from 'linkifyjs';
 import { Box, Chip, Avatar, Text, config, toRem } from 'folds';
@@ -437,7 +437,8 @@ export function useTimelineEventRenderer({
       ) : null;
 
     const reactionRelations = getEventReactions(timelineSet, mEventId);
-    const reactions = reactionRelations?.getSortedAnnotationsByKey();
+    const annotations = reactionRelations?.getSortedAnnotationsByKey();
+    const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
     const hasReactions = reactions && reactions.length > 0;
 
     return (
@@ -540,7 +541,8 @@ export function useTimelineEventRenderer({
             : (threadReplyTargetId ?? rawReplyEventId);
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
         const highlighted = focusItem?.index === item && focusItem.highlight;
         const marked = activeReplyId === mEventId && !suppressMark;
@@ -645,7 +647,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -709,7 +711,8 @@ export function useTimelineEventRenderer({
             : (threadReplyTargetId ?? rawReplyEventId);
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
         const highlighted = focusItem?.index === item && focusItem.highlight;
         const marked = activeReplyId === mEventId && !suppressMark;
@@ -777,7 +780,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -888,7 +891,8 @@ export function useTimelineEventRenderer({
             : (threadReplyTargetId ?? rawReplyEventId);
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
         const highlighted = focusItem?.index === item && focusItem.highlight;
         const marked = activeReplyId === mEventId && !suppressMark;
@@ -949,7 +953,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1014,7 +1018,8 @@ export function useTimelineEventRenderer({
             : (threadReplyTargetId ?? rawReplyEventId);
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
         const highlighted = focusItem?.index === item && focusItem.highlight;
         const marked = activeReplyId === mEventId && !suppressMark;
@@ -1119,7 +1124,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1186,7 +1191,8 @@ export function useTimelineEventRenderer({
 
         const senderId = mEvent.getSender() ?? '';
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -1226,7 +1232,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1279,7 +1285,8 @@ export function useTimelineEventRenderer({
         );
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -1319,7 +1326,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1374,7 +1381,8 @@ export function useTimelineEventRenderer({
         );
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -1414,7 +1422,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1469,7 +1477,8 @@ export function useTimelineEventRenderer({
         );
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -1509,7 +1518,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1553,7 +1562,7 @@ export function useTimelineEventRenderer({
         const senderId = mEvent.getSender() ?? '';
         const senderName = getMemberDisplayName(room, senderId) || getMxIdLocalPart(senderId);
 
-        const content = mEvent.getContent() as SessionMembershipData;
+        const content = mEvent.getContent() as Record<string, unknown>;
         const prevContent = mEvent.getPrevContent();
 
         const callJoined = content.application;
@@ -1571,7 +1580,8 @@ export function useTimelineEventRenderer({
         );
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -1611,7 +1621,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1680,7 +1690,8 @@ export function useTimelineEventRenderer({
           ) : null;
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         if (mEvent.isRedacted()) {
@@ -1813,7 +1824,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -1895,7 +1906,8 @@ export function useTimelineEventRenderer({
         ) : null;
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -1935,7 +1947,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}
@@ -2003,7 +2015,8 @@ export function useTimelineEventRenderer({
         );
 
         const reactionRelations = getEventReactions(timelineSet, mEventId);
-        const reactions = reactionRelations?.getSortedAnnotationsByKey();
+        const annotations = reactionRelations?.getSortedAnnotationsByKey();
+        const reactions = annotations?.filter((annotation) => annotation[1].size > 0);
         const hasReactions = reactions && reactions.length > 0;
 
         return (
@@ -2043,7 +2056,7 @@ export function useTimelineEventRenderer({
               if (!reactionRelations && !threadChip) return undefined;
               return (
                 <>
-                  {reactionRelations && (
+                  {reactionRelations && hasReactions && (
                     <Reactions
                       style={{ marginTop: config.space.S200 }}
                       room={room}

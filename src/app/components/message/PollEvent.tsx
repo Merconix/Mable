@@ -20,6 +20,7 @@ import {
   M_POLL_RESPONSE,
   M_POLL_START,
   REFERENCE_RELATION,
+  RoomEvent,
   type MatrixEvent,
 } from 'matrix-js-sdk';
 import * as css from './PollEvent.css';
@@ -110,18 +111,30 @@ export function PollEvent({ content, mEvent, mx, room }: PollEventProps) {
   // manual sorting because the timeline is sometimes sent stupidly <3
   const [sortedChildEvents, setSortedChildEvents] = useState(sortChildEvents(childEvents));
   const [isEnded, setIsEnded] = useState(getEndIndex(sortedChildEvents) !== -1);
+  const [updateCounter, setUpdateCounter] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setUpdateCounter((c) => c + 1);
+    room.on(RoomEvent.Timeline, handleUpdate);
+    return () => {
+      room.off(RoomEvent.Timeline, handleUpdate);
+    };
+  }, [room]);
 
   // ensure a new sorted array is only generated when a new list is made
   useEffect(() => {
-    let newChildEvents = childEvents ? sortChildEvents(childEvents) : [];
+    const latestChildEvents = room
+      ?.getUnfilteredTimelineSet()
+      .relations.getAllChildEventsForEvent(eventId ?? '')
+      .filter((event) => event.getRelation()?.rel_type === REFERENCE_RELATION.name);
+
+    let newChildEvents = latestChildEvents ? sortChildEvents(latestChildEvents) : [];
     const newEndIndex = getEndIndex(newChildEvents);
 
     setSortedChildEvents(newChildEvents);
     setIsEnded(newEndIndex !== -1);
-
-    // This is to avoid recomputation for anything but the childEvents changing
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-  }, [childEvents.length, sortChildEvents, getEndIndex]);
+  }, [updateCounter, sortChildEvents, getEndIndex, room, eventId]);
 
   if (!content) return null;
   const finalArray = isEnded

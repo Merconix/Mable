@@ -1,6 +1,6 @@
 {
   "name": "sable",
-  "version": "1.18.3",
+  "version": "1.19.4",
   "description": "An almost stable Matrix client",
   "keywords": [],
   "license": "AGPL-3.0-only",
@@ -71,7 +71,7 @@
     "linkify-react": "^4.3.3",
     "linkifyjs": "^4.3.3",
     "marked": "^18.0.5",
-    "matrix-js-sdk": "^38.4.0",
+    "matrix-js-sdk": "^41.9.0",
     "matrix-widget-api": "^1.17.0",
     "pdfjs-dist": "^6.1.200",
     "react": "^18.3.1",

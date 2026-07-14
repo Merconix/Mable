@@ -158,7 +158,12 @@ export const RoomIntro = as<'div', RoomIntroProps>(({ room, ...props }, ref) => 
                 disabled={prevRoomState.status === AsyncStatus.Loading}
                 after={
                   prevRoomState.status === AsyncStatus.Loading ? (
-                    <Spinner size="50" variant="Secondary" fill="Soft" />
+                    <Spinner
+                      size="50"
+                      variant="Secondary"
+                      fill="Soft"
+                      style={{ background: 'transparent' }}
+                    />
                   ) : undefined
                 }
               >

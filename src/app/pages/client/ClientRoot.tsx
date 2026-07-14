@@ -53,6 +53,8 @@ import { pushSessionToSW } from '../../../sw-session';
 import { SyncStatus } from './SyncStatus';
 import { SpecVersions } from './SpecVersions';
 import { AutoDiscovery } from './AutoDiscovery';
+import { useSetting } from '$state/hooks/settings';
+import { settingsAtom } from '$state/settings';
 
 const log = createLogger('ClientRoot');
 
@@ -60,11 +62,14 @@ const isClientReady = (syncState: string | null): boolean =>
   syncState === 'PREPARED' || syncState === 'SYNCING' || syncState === 'CATCHUP';
 
 function ClientRootLoading() {
+  const [showEasterEggs] = useSetting(settingsAtom, 'showEasterEggs');
+  const [animalKind] = useSetting(settingsAtom, 'animalKind');
+
   return (
     <SplashScreen>
       <Box direction="Column" grow="Yes" alignItems="Center" justifyContent="Center" gap="400">
         <Spinner variant="Secondary" size="600" />
-        <Text>Petting cats</Text>
+        <Text>{`Petting ${showEasterEggs && animalKind ? animalKind : 'cats'}`}</Text>
       </Box>
     </SplashScreen>
   );

@@ -1437,7 +1437,11 @@ export const useCommands = (mx: MatrixClient, room: Room): CommandRecord => {
             sendFeedback('Encryption is not enabled on this client.', room, mx.getSafeUserId());
             return;
           }
-          crypto
+          (
+            crypto as unknown as {
+              shareRoomHistoryWithUser: (roomId: string, userId: string) => Promise<void>;
+            }
+          )
             .shareRoomHistoryWithUser(roomId, targetUserId)
             .then(() => {
               sendFeedback(
@@ -1446,7 +1450,7 @@ export const useCommands = (mx: MatrixClient, room: Room): CommandRecord => {
                 mx.getSafeUserId()
               );
             })
-            .catch((e) => {
+            .catch((e: Error) => {
               sendFeedback(
                 `Failed to share E2EE history: ${(e as Error).message}`,
                 room,

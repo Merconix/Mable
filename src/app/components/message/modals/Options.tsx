@@ -50,6 +50,7 @@ import {
   useIsBookmarked,
 } from '$features/bookmarks';
 import { CopyIcon } from '@phosphor-icons/react';
+import * as OptionsCss from './Options.css';
 
 function WrappedMessage({
   isModal,
@@ -368,6 +369,7 @@ export function OptionQuickMenu({
               size="300"
               radii="300"
               aria-pressed={!!emojiBoardAnchor}
+              className={OptionsCss.UserQuickMenuButton}
             >
               {menuIcon(Smiley)}
             </IconButton>
@@ -382,6 +384,7 @@ export function OptionQuickMenu({
           variant="SurfaceVariant"
           size="300"
           radii="300"
+          className={OptionsCss.UserQuickMenuButton}
         >
           {menuIcon(ArrowBendUpLeftIcon)}
         </IconButton>
@@ -395,6 +398,7 @@ export function OptionQuickMenu({
             variant="SurfaceVariant"
             size="300"
             radii="300"
+            className={OptionsCss.UserQuickMenuButton}
           >
             {menuIcon(ChatCircleDots)}
           </IconButton>
@@ -408,6 +412,7 @@ export function OptionQuickMenu({
             variant="SurfaceVariant"
             size="300"
             radii="300"
+            className={OptionsCss.UserQuickMenuButton}
           >
             {menuIcon(PencilSimple)}
           </IconButton>
@@ -442,6 +447,7 @@ export function OptionQuickMenu({
             radii="300"
             onClick={handleOpenMenu}
             aria-pressed={!!menuAnchor}
+            className={OptionsCss.UserQuickMenuButton}
           >
             {menuIcon(DotsThreeOutlineVerticalIcon, {
               weight: menuAnchor ? 'fill' : 'regular',
@@ -599,7 +605,7 @@ export function OptionMenu({
                   onReactionToggle(mEvent.getId() ?? '', key, shortcode);
                   onTotalClose();
                 }}
-                count={isModal ? 6 : 4}
+                count={isModal ? 8 : 4}
               />
             )}
             <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
@@ -612,6 +618,23 @@ export function OptionMenu({
                 >
                   <Text className={css.MessageMenuItemText} as="span" size="T300" truncate>
                     Add Reaction
+                  </Text>
+                </MenuItem>
+              )}
+
+              {canEditEvent(mx, mEvent) && onEditId && isModal && (
+                <MenuItem
+                  size="300"
+                  after={menuIcon(PencilSimple)}
+                  radii="300"
+                  data-event-id={mEvent.getId()}
+                  onClick={() => {
+                    onEditId(mEvent.getId());
+                    onTotalClose();
+                  }}
+                >
+                  <Text className={css.MessageMenuItemText} as="span" size="T300" truncate>
+                    Edit Message
                   </Text>
                 </MenuItem>
               )}
@@ -639,7 +662,9 @@ export function OptionMenu({
                     </Text>
                   </MenuItem>
                 )}
-              {relations && <MessageAllReactionItem room={room} relations={relations} />}
+              {relations && (
+                <MessageAllReactionItem room={room} relations={relations} closeMenu={closeMenu} />
+              )}
               <MenuItem
                 size="300"
                 after={menuIcon(ArrowBendUpLeftIcon)}
@@ -670,7 +695,7 @@ export function OptionMenu({
                   </Text>
                 </MenuItem>
               )}
-              {canEditEvent(mx, mEvent) && onEditId && (
+              {canEditEvent(mx, mEvent) && onEditId && !isModal && (
                 <MenuItem
                   size="300"
                   after={menuIcon(PencilSimple)}

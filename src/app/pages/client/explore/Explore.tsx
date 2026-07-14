@@ -54,6 +54,7 @@ import { isServerName } from '$utils/matrix';
 import { useScreenSizeContext, ScreenSize } from '$hooks/useScreenSize';
 import { isResizingSidebarAtom } from '$state/isResizingSidebar';
 import { useSetAtom } from 'jotai';
+import { UserQuickTools } from '../sidebar/UserQuickTools';
 
 type AddServerProps = {
   hideText?: boolean;
@@ -267,6 +268,7 @@ export function Explore() {
   const screenSize = useScreenSizeContext();
   const isMobile = screenSize === ScreenSize.Mobile;
   const hideText = curWidth <= 80 && !isMobile;
+  const [oldSidebar] = useSetting(settingsAtom, 'oldSidebar');
 
   return (
     <Box
@@ -410,13 +412,14 @@ export function Explore() {
           setCurWidth={setCurWidth}
           sidebarWidth={roomSidebarWidth}
           setSidebarWidth={setRoomSidebarWidth}
-          instep={80}
+          instep={50}
           outstep={190}
           minValue={50}
           maxValue={500}
           setAnnouncement={setIsResizingSidebar}
         />
       )}
+      {!oldSidebar && !isMobile && <UserQuickTools width={curWidth + 66} compact={false} />}
     </Box>
   );
 }

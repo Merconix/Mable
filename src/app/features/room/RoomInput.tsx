@@ -718,7 +718,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
         let content = await uploadToContent(upload);
         handleCancelUpload(uploads);
 
-        content.body = caption;
+        content.body = caption ?? '';
         content.formatted_body = undefined;
 
         if (formattedCaption) {
@@ -1592,6 +1592,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
                         }
                       }}
                       variant="SurfaceVariant"
+                      style={{ background: 'transparent' }}
                       size="300"
                       radii="300"
                       aria-label="Cancel reply"
@@ -1622,6 +1623,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
                         variant="SurfaceVariant"
                         size="300"
                         radii="300"
+                        style={{ background: 'transparent' }}
                         title={
                           silentReply ? 'Unmute reply notifications' : 'Mute reply notifications'
                         }
@@ -1814,6 +1816,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
                         variant="SurfaceVariant"
                         size="300"
                         radii="300"
+                        style={{ backgroundColor: 'transparent' }}
                       >
                         {composerIcon(GifIcon, {
                           weight: emojiBoardTab === EmojiBoardTab.Gif ? 'fill' : 'regular',

@@ -53,7 +53,7 @@ function CreatePackTile({ packs, roomId }: Readonly<CreatePackTileProps>) {
             display_name: name,
           },
         };
-        await mx.sendStateEvent(roomId, CustomStateEvent.PoniesRoomEmotes, content, stateKey);
+        await mx.sendStateEvent(roomId, CustomStateEvent.ImagePack, content, stateKey);
       },
       [mx, roomId]
     )
@@ -147,7 +147,7 @@ export function RoomPacks({ onViewPack }: Readonly<RoomPacksProps>) {
   const creators = useRoomCreators(room);
 
   const permissions = useRoomPermissions(creators, powerLevels);
-  const canEdit = permissions.stateEvent(CustomStateEvent.PoniesRoomEmotes, mx.getSafeUserId());
+  const canEdit = permissions.stateEvent(CustomStateEvent.ImagePack, mx.getSafeUserId());
 
   const unfilteredPacks = useRoomImagePacks(room);
   const packs = useMemo(() => unfilteredPacks.filter((pack) => !pack.deleted), [unfilteredPacks]);
@@ -161,7 +161,7 @@ export function RoomPacks({ onViewPack }: Readonly<RoomPacksProps>) {
         const addr = removedPacks[i];
         if (!addr) continue;
         // oxlint-disable-next-line no-await-in-loop
-        await mx.sendStateEvent(room.roomId, CustomStateEvent.PoniesRoomEmotes, {}, addr.stateKey);
+        await mx.sendStateEvent(room.roomId, CustomStateEvent.ImagePack, {}, addr.stateKey);
       }
     }, [mx, room, removedPacks])
   );

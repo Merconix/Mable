@@ -234,6 +234,7 @@ export function GifItem({
                             width: gif.width,
                             height: gif.height,
                             size: gif.size,
+                            mimetype: gif.mimetype,
                           },
                         ],
                       })

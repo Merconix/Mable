@@ -155,7 +155,7 @@ export function MessageDeleteInternal({ room, mEvent, onClose }: MessageDeleteIn
           variant="Critical"
           before={
             deleteState.status === AsyncStatus.Loading ? (
-              <Spinner fill="Solid" variant="Critical" size="200" />
+              <Spinner variant="Secondary" size="200" style={{ backgroundColor: 'transparent' }} />
             ) : undefined
           }
           aria-disabled={deleteState.status === AsyncStatus.Loading}

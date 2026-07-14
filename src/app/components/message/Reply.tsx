@@ -1,5 +1,5 @@
 import { Box, Chip, Text, as, color, toRem } from 'folds';
-import type { EventTimelineSet, IMentions, Room, SessionMembershipData } from '$types/matrix-sdk';
+import type { EventTimelineSet, IMentions, Room } from '$types/matrix-sdk';
 import { EventType, MsgType } from '$types/matrix-sdk';
 import type { MouseEventHandler, ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
@@ -403,7 +403,7 @@ export const Reply = as<'div', ReplyProps>(
       image = timelineIcon(Hash);
       bodyJSX = ' changed room avatar';
     } else if (eventType === EventType.GroupCallMemberPrefix && !!replyEvent) {
-      const callJoined = replyEvent.getContent<SessionMembershipData>().application;
+      const callJoined = replyEvent.getContent<Record<string, unknown>>().application;
       image = callJoined ? timelineIcon(Phone) : timelineIcon(PhoneDisconnect);
       bodyJSX = callJoined ? ' joined the call' : ' ended the call';
     } else if (eventType === EventType.RoomRedaction && replyEvent) {

@@ -83,7 +83,7 @@ type RenderImageProps = {
   tabIndex: number;
 };
 export type ImageContentProps = {
-  body: string;
+  body?: string;
   mimeType?: string;
   url: string;
   info?: IImageInfo;
@@ -141,9 +141,9 @@ export const ImageContent = as<'div', ImageContentProps>(
       info?.mimetype === 'image/gif' ||
       info?.mimetype === 'image/apng' ||
       info?.mimetype === 'image/webp' ||
-      body.toLowerCase().endsWith('.gif') ||
-      body.toLowerCase().endsWith('.apng') ||
-      body.toLowerCase().endsWith('.webp') ||
+      (body ?? '').toLowerCase().endsWith('.gif') ||
+      (body ?? '').toLowerCase().endsWith('.apng') ||
+      (body ?? '').toLowerCase().endsWith('.webp') ||
       url.toLowerCase().endsWith('.gif') ||
       url.toLowerCase().endsWith('.apng') ||
       url.toLowerCase().endsWith('.webp');
@@ -269,7 +269,7 @@ export const ImageContent = as<'div', ImageContentProps>(
                 >
                   {renderViewer({
                     src: viewerFullSrc ?? srcState.data,
-                    alt: body,
+                    alt: body ?? '',
                     requestClose: () => setViewer(false),
                     info: info,
                   })}
@@ -315,8 +315,8 @@ export const ImageContent = as<'div', ImageContentProps>(
             style={{ width: '100%' }}
           >
             {renderImage({
-              alt: body,
-              title: body,
+              alt: body ?? '',
+              title: body ?? '',
               src: srcState.data,
               onLoad: handleLoad,
               onError: handleError,
@@ -437,11 +437,12 @@ export const ImageContent = as<'div', ImageContentProps>(
                               gifs: [
                                 ...favoritedContent.gifs,
                                 {
-                                  title: body,
+                                  title: body ?? '',
                                   url: url,
                                   width: imageW,
                                   height: imageH,
                                   size: info?.size,
+                                  mimetype: info?.mimetype,
                                 },
                               ],
                             })

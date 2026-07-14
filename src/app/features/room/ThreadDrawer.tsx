@@ -32,6 +32,8 @@ import {
   reactionOrEditEvent,
   resolveReplyDraftTarget,
   unwrapRelationJumpTarget,
+  getEditedEvent,
+  getEventReactions,
 } from '$utils/room';
 import { getMxIdLocalPart, toggleReaction } from '$utils/matrix';
 import { useMatrixClient } from '$hooks/useMatrixClient';
@@ -287,6 +289,13 @@ export function ThreadDrawer({ room, threadRootId, onClose, overlay }: ThreadDra
       collapsed: false,
       willRenderNewDivider: false,
       willRenderDayDivider: false,
+      editId: getEditedEvent(ev.getId() ?? '', ev, timelineSet)?.getId(),
+      reactionsKey:
+        getEventReactions(timelineSet, ev.getId() ?? '')
+          ?.getSortedAnnotationsByKey()
+          ?.map((r) => `${r[0]}:${r[1].size}`)
+          .join(',') ?? '',
+      content: ev.getContent(),
     }));
     // forceUpdateCounter makes this recompute whenever events arrive
   }, [room, threadRootId, thread, processedEvents, forceUpdateCounter]);

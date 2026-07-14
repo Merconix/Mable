@@ -86,6 +86,7 @@ const buildListRequiredState = (): MSC3575RoomSubscription['required_state'] => 
   [EventType.RoomMember, MSC3575_STATE_KEY_ME],
   ['m.space.child', MSC3575_WILDCARD],
   [EventType.GroupCallMemberPrefix, MSC3575_WILDCARD],
+  [CustomStateEvent.ImagePack, MSC3575_WILDCARD],
   [CustomStateEvent.PoniesRoomEmotes, MSC3575_WILDCARD],
   [CustomStateEvent.RoomAbbreviations, ''],
   [CustomStateEvent.RoomBanner, ''],

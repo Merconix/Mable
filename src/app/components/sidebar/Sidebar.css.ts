@@ -123,7 +123,6 @@ export const SidebarItemBottom = recipe({
   base: [
     DefaultReset,
     {
-      minHeight: toRem(30),
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

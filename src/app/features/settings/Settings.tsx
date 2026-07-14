@@ -78,14 +78,14 @@ export enum SettingsPages {
 
 type PhosphorIcon = ComponentType<IconProps>;
 
-type SettingsMenuItem = {
+export type SettingsMenuItem = {
   id: SettingsSectionId;
   name: string;
   icon: PhosphorIcon;
   activeIcon?: PhosphorIcon;
 };
 
-const settingsMenuIcons: Record<
+export const settingsMenuIcons: Record<
   SettingsSectionId,
   Pick<SettingsMenuItem, 'icon' | 'activeIcon'>
 > = {

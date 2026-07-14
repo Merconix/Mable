@@ -38,7 +38,7 @@ type WaitingMessageProps = {
 function WaitingMessage({ message }: WaitingMessageProps) {
   return (
     <Box alignItems="Center" gap="200">
-      <Spinner variant="Secondary" size="200" />
+      <Spinner variant="Secondary" size="200" style={{ backgroundColor: 'transparent' }} />
       <Text size="T300">{message}</Text>
     </Box>
   );

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { IncomingCall } from '$state/callEmbed';
 import { evaluateIncomingCallFallback } from './callSignalingFallback';
-import type { SessionDescription } from './callMembershipState';
 import { INCOMING_MEMBERSHIP_GRACE_MS } from './callSignalingPolicy';
 
 const NOW = 1_700_000_000_000;
-const EMPTY_SESSION = {} as SessionDescription;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const EMPTY_SESSION_MEMBERSHIPS: any[] = [];
 
 const incomingCall: IncomingCall = {
   roomId: '!room:example.org',
@@ -25,7 +25,7 @@ describe('evaluateIncomingCallFallback', () => {
       evaluateIncomingCallFallback({ ...incomingCall, expiresAt: NOW - 1 }, NOW, {
         myUserId: '@self:example.org',
         getRoom: () => null,
-        getSessionDescription: () => EMPTY_SESSION,
+        getSessionMemberships: () => EMPTY_SESSION_MEMBERSHIPS,
       })
     ).toEqual({ kind: 'clear', reason: 'expired' });
   });
@@ -35,7 +35,7 @@ describe('evaluateIncomingCallFallback', () => {
       evaluateIncomingCallFallback(incomingCall, NOW, {
         myUserId: '@self:example.org',
         getRoom: () => ({ roomId: incomingCall.roomId }) as never,
-        getSessionDescription: () => EMPTY_SESSION,
+        getSessionMemberships: () => EMPTY_SESSION_MEMBERSHIPS,
         isIncomingActive: () => false,
       })
     ).toEqual({ kind: 'none' });
@@ -48,7 +48,7 @@ describe('evaluateIncomingCallFallback', () => {
       {
         myUserId: '@self:example.org',
         getRoom: () => ({ roomId: incomingCall.roomId }) as never,
-        getSessionDescription: () => EMPTY_SESSION,
+        getSessionMemberships: () => EMPTY_SESSION_MEMBERSHIPS,
         isIncomingActive: () => false,
       }
     );

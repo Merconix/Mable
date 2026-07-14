@@ -18,6 +18,7 @@ import {
   getVideoInfo,
   mxcUrlToHttp,
 } from '$utils/matrix';
+import { mimeTypeToExt } from '$utils/mimeTypes';
 import type { TUploadItem } from '$state/room/roomInputDrafts';
 import type { GifData } from '$components/emoji-board/types';
 import { encodeBlurHash } from '$utils/blurHash';
@@ -261,14 +262,17 @@ export const getGifMsgContent = async (
     );
   }
 
+  const mimetype = gif.mimetype ?? 'image/gif';
+  const ext = mimeTypeToExt(mimetype);
+
   const content: IContent = {
     msgtype: MsgType.Image,
-    body: gif.title,
+    body: gif.title.endsWith(`.${ext}`) ? gif.title : `${gif.title}.${ext}`,
     url: mxcUrl,
     info: {
       w: gif.width,
       h: gif.height,
-      mimetype: 'image/gif',
+      mimetype,
     },
   };
 
