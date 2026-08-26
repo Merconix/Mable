@@ -1,4 +1,0 @@
-rules:
-  cache-poisoning:
-    remap:
-      severity: informational
