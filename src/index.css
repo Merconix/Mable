@@ -29,7 +29,7 @@
 }
 :root {
   --tc-link: hsl(39.4, 100%, 45.1%);
-
+}
 @layer sable-reset {
   :root {
   --tc-link: hsl(213deg 100% 45%);
