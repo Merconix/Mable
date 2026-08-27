@@ -334,7 +334,7 @@ jobs:
           fi
           CONFIG_ARGS=""
           [ "$IS_NIGHTLY" = "true" ] && CONFIG_ARGS="--config src-tauri/tauri.nightly.conf.json"
-          pnpm tauri android build $CONFIG_ARGS --apk --aab --target aarch64 armv7
+          pnpm tauri android build $CONFIG_ARGS --apk --aab --no-sign --target aarch64 armv7
           OUT='src-tauri/gen/android/app/build/outputs'
           APK=$(find "$OUT/apk/universal/release" -name '*.apk' -type f | head -1)
           AAB=$(find "$OUT/bundle/universalRelease" -name '*.aab' -type f | head -1)
