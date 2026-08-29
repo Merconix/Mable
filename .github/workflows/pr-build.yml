@@ -115,7 +115,7 @@ jobs:
         run: |
           export SABLE_LAUNCHER_ICON=dev
           if [ -n "${ANDROID_KEY_BASE64:-}" ]; then
-            pnpm tauri android build --config src-tauri/tauri.pr.conf.json --debug --apk --target aarch64 armv7
+            pnpm tauri android build --config src-tauri/tauri.pr.conf.json --apk --target aarch64 armv7
           else
             # No keystore secret available: build a debug APK (signed with the
             # debug keystore) so members can still sideload the build.
