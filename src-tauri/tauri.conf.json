@@ -1,11 +1,11 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Sable",
+  "productName": "Mable",
   "version": "1.21.0",
-  "identifier": "moe.sable.client",
+  "identifier": "mable.client",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:8080",
+    "devUrl": "http://localhost:8600",
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build"
   },
@@ -64,7 +64,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://github.com/SableClient/Sable/releases/latest/download/latest.json"],
+      "endpoints": ["https://github.com/Merconix/Mable/releases/latest/download/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0NDc2QkI0NjdCODlEQUUKUldTdW5iaG50R3RIeFBQeGFwcDZNcGhCQ2Y4UFgzVnptRmNRZjRoVDl0MkdOZmREdC9pTUZrZnAK"
     },
     "typegen": {
@@ -90,10 +90,10 @@
     "notifications": {
       "actionTypes": [
         {
-          "id": "sable-message",
+          "id": "mable-message",
           "actions": [
             {
-              "id": "sable-reply",
+              "id": "mable-reply",
               "title": "Reply",
               "input": true,
               "inputButtonTitle": "Send",
