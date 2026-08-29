@@ -161,7 +161,7 @@ jobs:
             ARGS='--config {"bundle":{"createUpdaterArtifacts":false}}'
           fi
           if [ "$IS_NIGHTLY" = "true" ] && [ "$MATRIX_NAME" = "Windows" ]; then
-            ARGS="$ARGS --bundles nsis"
+            ARGS="$ARGS --debug --bundles nsis"
           fi
           if [ "$IS_NIGHTLY" = "true" ]; then
             echo "SABLE_BUILD_FLAVOR=dev" >> "$GITHUB_ENV"
