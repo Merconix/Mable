@@ -91,13 +91,13 @@
 .dark-theme {
   /* Background */
   --sable-bg-container: #262626;
-  --sable-bg-container-hover: ##303030;
+  --sable-bg-container-hover: #303030;
   --sable-bg-container-active: #333333;
   --sable-bg-container-line: #353535;
   --sable-bg-on-container: #f2f2f2;
 
   /* Surface */
-  --sable-surface-container: ##303030;
+  --sable-surface-container: #303030;
   --sable-surface-container-hover: #333333;
   --sable-surface-container-active: #404040;
   --sable-surface-container-line: #3E3E3E;
