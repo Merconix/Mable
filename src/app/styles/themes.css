@@ -1,24 +1,24 @@
 /* --- Light --- */
 .light-theme {
   /* Background */
-  --sable-bg-container: #f2f2f2;
+  --sable-bg-container: #f9f9f9;
   --sable-bg-container-hover: #e5e5e5;
   --sable-bg-container-active: #d9d9d9;
-  --sable-bg-container-line: #e2e2e2;
-  --sable-bg-on-container: #000000;
+  --sable-bg-container-line: #e9e9e9;
+  --sable-bg-on-container: #454545;
 
   /* Surface */
   --sable-surface-container: #ffffff;
-  --sable-surface-container-hover: #f2f2f2;
+  --sable-surface-container-hover: #f9f9f9;
   --sable-surface-container-active: #e5e5e5;
   --sable-surface-container-line: #e9e9e9;
-  --sable-surface-on-container: #000000;
+  --sable-surface-on-container: #222;
 
   /* Surface Variant */
-  --sable-surface-var-container: #f2f2f2;
+  --sable-surface-var-container: #f9f9f9;
   --sable-surface-var-container-hover: #e5e5e5;
   --sable-surface-var-container-active: #d9d9d9;
-  --sable-surface-var-container-line: #e2e2e2;
+  --sable-surface-var-container-line: #e9e9e9;
   --sable-surface-var-on-container: #000000;
 
   /* Primary */
@@ -90,14 +90,14 @@
 /* --- Dark --- */
 .dark-theme {
   /* Background */
-  --sable-bg-container: #202020;
-  --sable-bg-container-hover: #2E2E2E;
+  --sable-bg-container: #262626;
+  --sable-bg-container-hover: ##303030;
   --sable-bg-container-active: #333333;
   --sable-bg-container-line: #353535;
   --sable-bg-on-container: #f2f2f2;
 
   /* Surface */
-  --sable-surface-container: #2E2E2E;
+  --sable-surface-container: ##303030;
   --sable-surface-container-hover: #333333;
   --sable-surface-container-active: #404040;
   --sable-surface-container-line: #3E3E3E;
@@ -127,7 +127,7 @@
   --sable-sec-main-hover: #e5e5e5;
   --sable-sec-main-active: #d9d9d9;
   --sable-sec-main-line: #cccccc;
-  --sable-sec-on-main: #202020;
+  --sable-sec-on-main: #262626;
   --sable-sec-container: #404040;
   --sable-sec-container-hover: #4d4d4d;
   --sable-sec-container-active: #595959;
