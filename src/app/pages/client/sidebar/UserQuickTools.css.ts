@@ -4,7 +4,6 @@ import { color, config, toRem } from 'folds';
 export const UserQuickTools = style({
   backgroundColor: "var(--sable-bg-avatar)",
   color: color.Background.OnContainer,
-  position: 'absolute',
   zIndex: '1000',
   height: toRem(74),
   bottom: '0',
