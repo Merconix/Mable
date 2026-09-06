@@ -2,7 +2,7 @@ import { style } from '@vanilla-extract/css';
 import { color, config, toRem } from 'folds';
 
 export const UserQuickTools = style({
-  backgroundColor: color.Background.Container,
+  backgroundColor: "#2b2b2b",
   color: color.Background.OnContainer,
   position: 'absolute',
   zIndex: '1000',
