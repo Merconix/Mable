@@ -41,10 +41,6 @@
 .dark-theme,
 .sable-remote-kind-dark {
   --tc-link: hsl(37.03deg 100% 80%);
-
-  .dark-theme,
-  .sable-remote-kind-dark {
-    --tc-link: hsl(213deg 100% 80%);
   --font-secondary: "AdwaitaSans", var(--font-emoji), sans-serif;
   --font-monospace: "AdwaitaMono", monospace
 }
