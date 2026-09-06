@@ -1,10 +1,10 @@
 [package]
-name = "sable"
+name = "Mable"
 version = "1.21.0"
-description = "Yet another matrix client but better"
+description = "Yet another matrix client but betterish"
 authors = ["Sable Maintainers"]
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/SableClient/Sable"
+repository = "https://github.com/Merconix/Mable"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
