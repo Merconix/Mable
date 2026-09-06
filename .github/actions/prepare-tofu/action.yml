@@ -1,0 +1,62 @@
+name: Prepare OpenTofu Deployment
+description: Prepares OpenTofu in infra/web.
+
+inputs:
+  build-flavor:
+    description: Build flavor (stable or dev). Controls app build behavior.
+    required: false
+    default: stable
+
+runs:
+  using: composite
+  steps:
+    - name: Validate deployment configuration
+      shell: bash
+      run: |
+        missing=()
+        for name in \
+          TF_HTTP_ADDRESS \
+          TF_HTTP_LOCK_ADDRESS \
+          TF_HTTP_UNLOCK_ADDRESS \
+          TF_VAR_custom_domain \
+          TF_VAR_worker_name \
+          SENTRY_ORG \
+          SENTRY_PROJECT
+        do
+          if [[ -z "${!name:-}" ]]; then
+            missing+=("$name")
+          fi
+        done
+
+        if (( ${#missing[@]} > 0 )); then
+          printf 'Missing required GitHub Environment variables: %s\n' "${missing[*]}" >&2
+          exit 1
+        fi
+
+    - name: Setup app and build
+      uses: ./.github/actions/setup
+      with:
+        build: 'true'
+      env:
+        SABLE_BUILD_FLAVOR: ${{ inputs.build-flavor }}
+        VITE_SENTRY_DSN: ${{ env.VITE_SENTRY_DSN }}
+        VITE_SENTRY_ENVIRONMENT: ${{ env.VITE_SENTRY_ENVIRONMENT }}
+        VITE_APP_VERSION: ${{ env.VITE_APP_VERSION }}
+        SENTRY_AUTH_TOKEN: ${{ env.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ env.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
+
+    - name: Check formatting
+      shell: bash
+      working-directory: ${{ github.workspace }}/infra/web
+      run: mise run opentofu -- fmt -check
+
+    - name: Initialize OpenTofu
+      shell: bash
+      working-directory: ${{ github.workspace }}/infra/web
+      run: mise run opentofu -- init -input=false -reconfigure
+
+    - name: Validate configuration
+      shell: bash
+      working-directory: ${{ github.workspace }}/infra/web
+      run: mise run opentofu -- validate -no-color
