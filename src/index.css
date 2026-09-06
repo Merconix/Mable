@@ -45,10 +45,6 @@
   --font-monospace: "AdwaitaMono", monospace
 }
 
-    --font-secondary: 'Nunito Variable', var(--font-emoji), sans-serif;
-    --font-monospace: 'Space Mono', monospace;
-  }
-
   html {
     height: 100%;
     overflow: hidden;
