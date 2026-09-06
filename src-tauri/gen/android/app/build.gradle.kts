@@ -46,7 +46,6 @@ android {
             }
         }
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             packaging {
                 jniLibs.useLegacyPackaging = true
