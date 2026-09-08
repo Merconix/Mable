@@ -1,5 +1,5 @@
 [package]
-name = "Mable"
+name = "Sable"
 version = "1.21.0"
 description = "Yet another matrix client but betterish"
 authors = ["Sable Maintainers"]
