@@ -2,7 +2,7 @@ import { style } from '@vanilla-extract/css';
 import { color, config, toRem } from 'folds';
 
 export const UserQuickTools = style({
-  backgroundColor: "var(--sable-bg-avatar)",
+  backgroundColor: "color-mix(in srgb, var(--sable-surface-container), var(--sable-bg-container) 40%);",
   color: color.Background.OnContainer,
   zIndex: '1000',
   height: toRem(74),

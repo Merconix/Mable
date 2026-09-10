@@ -8,7 +8,7 @@ export const Sidebar = style([
   DefaultReset,
   {
     width: toRem(66),
-    backgroundColor: "var(--sable-bg-sidebar)",
+    backgroundColor: "color-mix(in srgb-linear, var(--sable-bg-container), black 8%);",
     borderRight: `${config.borderWidth.B300} solid ${color.Background.ContainerLine}`,
 
     display: 'flex',
