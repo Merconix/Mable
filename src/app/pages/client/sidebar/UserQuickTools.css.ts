@@ -3,7 +3,7 @@ import { color, config, toRem } from 'folds';
 
 export const UserQuickTools = style({
   backgroundColor: "var(--sable-bg-avatar)",
-  color: "background-color: color-mix(in srgb, var(--sable-surface-container), var(--sable-bg-container) 40%);",
+  color: "color-mix(in srgb, var(--sable-surface-container), var(--sable-bg-container) 40%);",
   zIndex: '1000',
   height: toRem(74),
   bottom: '0',
