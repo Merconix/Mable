@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
   <foreground>
-    <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="5%" />
+    <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="25%" />
   </foreground>
   <background android:drawable="@color/ic_launcher_background"/>
   <monochrome android:drawable="@mipmap/ic_launcher_adaptive_foreground"/>
