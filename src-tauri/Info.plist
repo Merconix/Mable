@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Sable</string>
+    <string>Mable</string>
     <key>CFBundleName</key>
-    <string>Sable</string>
+    <string>Mable</string>
     <key>NSCameraUsageDescription</key>
-    <string>Sable needs camera access for video calls.</string>
+    <string>Mable needs camera access for video calls.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Sable needs microphone access for voice and video calls.</string>
+    <string>Mable needs microphone access for voice and video calls.</string>
     <!-- APP-ICON ALTERNATES START -->
     <key>TauriAppIconAliases</key>
     <dict>
