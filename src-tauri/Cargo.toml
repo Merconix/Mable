@@ -1,8 +1,8 @@
 [package]
-name = "sable"
+name = "mable"
 version = "1.21.0"
-description = "Yet another matrix client but betterish"
-authors = ["Sable Maintainers"]
+description = "A M(ostly st)able Matrix Client"
+authors = ["Merconix & Sable Maintainers"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/Merconix/Mable"
 edition = "2021"
