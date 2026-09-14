@@ -2,7 +2,7 @@
 name = "sable"
 version = "1.22.5"
 description = "Yet another matrix client but betterish"
-authors = ["Sable Maintainers"]
+authors = ["Merconix & Sable Maintainers"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/Merconix/Mable"
 edition = "2021"
