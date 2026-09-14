@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Mable</string>
+    <string>Sable</string>
     <key>CFBundleName</key>
-    <string>Mable</string>
+    <string>Sable</string>
     <key>NSCameraUsageDescription</key>
     <string>Mable needs camera access for video calls.</string>
     <key>NSMicrophoneUsageDescription</key>
