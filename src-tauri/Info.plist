@@ -7,9 +7,9 @@
     <key>CFBundleName</key>
     <string>Sable</string>
     <key>NSCameraUsageDescription</key>
-    <string>Mable needs camera access for video calls.</string>
+    <string>Sable needs camera access for video calls.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Mable needs microphone access for voice and video calls.</string>
+    <string>Sable needs microphone access for voice and video calls.</string>
     <!-- APP-ICON ALTERNATES START -->
     <key>TauriAppIconAliases</key>
     <dict>
