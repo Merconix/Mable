@@ -15,9 +15,8 @@ import {
   initClient,
   logoutClient,
   startClient,
-  stopClient,
 } from '$client/initMatrix';
-import { isLegacyWasmCryptoStoreError } from '$app/crypto/install';
+import { isNativeCryptoStoreError } from '$app/crypto/install';
 import { LegacyKeyExport } from './LegacyKeyExport';
 import { AsyncError } from '$components/AsyncError';
 import { SplashScreen } from '$components/splash-screen';
@@ -272,11 +271,10 @@ export function ClientRoot({ children }: ClientRootProps) {
   const sessionExpired = useSessionLogout(loadedClient);
   const mx = sessionExpired ? undefined : loadedClient;
 
-  const legacyCryptoError =
-    loadState.status === AsyncStatus.Error && isLegacyWasmCryptoStoreError(loadState.error)
+  const nativeCryptoError =
+    loadState.status === AsyncStatus.Error && isNativeCryptoStoreError(loadState.error)
       ? loadState.error
       : undefined;
-  const legacyCryptoClient = legacyCryptoError?.client;
 
   const roomMatch =
     matchPath(HOME_ROOM_PATH, location.pathname) ??
@@ -338,17 +336,16 @@ export function ClientRoot({ children }: ClientRootProps) {
     window.location.reload();
   }, [mx, activeSession, sessions, setSessions, setActiveSessionId]);
 
-  const [upgradeState, signOutForCryptoUpgrade] = useAsyncCallback<void, Error, []>(
+  const [recoveryState, signOutForCryptoRecovery] = useAsyncCallback<void, Error, []>(
     useCallback(async () => {
       if (!activeSession) return;
-      if (legacyCryptoClient) stopClient(legacyCryptoClient);
       await discardSessionStores(activeSession);
       setSessions({ type: 'DELETE', session: activeSession } as SessionsAction);
       setActiveSessionId(
         sessions.find((session) => session.userId !== activeSession.userId)?.userId ?? undefined
       );
       window.location.reload();
-    }, [activeSession, legacyCryptoClient, sessions, setSessions, setActiveSessionId])
+    }, [activeSession, sessions, setSessions, setActiveSessionId])
   );
 
   useSyncNicknames(mx);
@@ -406,7 +403,7 @@ export function ClientRoot({ children }: ClientRootProps) {
   );
 
   const isError = loadState.status === AsyncStatus.Error || startState.status === AsyncStatus.Error;
-  const legacyCryptoUpgradeRequired = legacyCryptoError !== undefined;
+  const nativeCryptoRecoveryRequired = nativeCryptoError !== undefined;
 
   // Set matrix client context: homeserver and sync type (not PII)
   useEffect(() => {
@@ -447,7 +444,7 @@ export function ClientRoot({ children }: ClientRootProps) {
   // Capture fatal client failures — useAsyncCallback swallows these into state so
   // they never reach the React ErrorBoundary; explicit capture is required.
   useEffect(() => {
-    if (loadState.status === AsyncStatus.Error && !isLegacyWasmCryptoStoreError(loadState.error)) {
+    if (loadState.status === AsyncStatus.Error && !isNativeCryptoStoreError(loadState.error)) {
       Sentry.captureException(loadState.error, { tags: { phase: 'load' } });
     }
   }, [loadState]);
@@ -499,26 +496,22 @@ export function ClientRoot({ children }: ClientRootProps) {
             <Dialog>
               <Box direction="Column" gap="400" style={{ padding: config.space.S400 }}>
                 {loadState.status === AsyncStatus.Error &&
-                  (legacyCryptoUpgradeRequired ? (
+                  (nativeCryptoRecoveryRequired ? (
                     <>
-                      <Text>Encrypted chat needs a one-time upgrade.</Text>
+                      <Text>Sign in again to continue using encrypted chats.</Text>
                       <Text>
-                        Sign out and sign in again to use native crypto. Local encrypted-message
-                        keys from this installation must be restored from backup.
+                        Export your message keys first, or restore them from backup after signing
+                        in.
                       </Text>
-                      {legacyCryptoClient && <LegacyKeyExport client={legacyCryptoClient} />}
-                      <AsyncError
-                        state={upgradeState}
-                        prefix="Failed to sign out for the crypto upgrade"
-                        size="T300"
-                      />
+                      <LegacyKeyExport exporter={nativeCryptoError.exportRoomKeys} />
+                      <AsyncError state={recoveryState} prefix="Failed to sign out" size="T300" />
                       <Button
                         variant="Critical"
-                        onClick={signOutForCryptoUpgrade}
-                        disabled={upgradeState.status === AsyncStatus.Loading}
+                        onClick={signOutForCryptoRecovery}
+                        disabled={recoveryState.status === AsyncStatus.Loading}
                       >
                         <Text as="span" size="B400">
-                          Sign out and upgrade
+                          Sign out and sign in again
                         </Text>
                       </Button>
                     </>
@@ -528,7 +521,7 @@ export function ClientRoot({ children }: ClientRootProps) {
                 {startState.status === AsyncStatus.Error && (
                   <Text>{`Failed to start. ${errorMessage(startState.error)}`}</Text>
                 )}
-                {!legacyCryptoUpgradeRequired && (
+                {!nativeCryptoRecoveryRequired && (
                   <Button variant="Critical" onClick={mx ? () => startMatrix(mx) : loadMatrix}>
                     <Text as="span" size="B400">
                       Retry

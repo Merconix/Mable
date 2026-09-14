@@ -20,6 +20,8 @@ export function getCallCapabilities(
   capabilities.add(MatrixCapabilities.MSC4039DownloadFile);
   capabilities.add(MatrixCapabilities.MSC4157SendDelayedEvent);
   capabilities.add(MatrixCapabilities.MSC4157UpdateDelayedEvent);
+  capabilities.add(MatrixCapabilities.MSC4407SendStickyEvent);
+  capabilities.add(MatrixCapabilities.MSC4407ReceiveStickyEvent);
   capabilities.add('moe.sable.thumbnails');
   capabilities.add('moe.sable.media_proxy');
   capabilities.add(`org.matrix.msc2762.timeline:${roomId}`);

@@ -1,4 +1,11 @@
 import type { MatrixClient } from '$types/matrix-sdk';
+import { createDebugLogger } from '$utils/debugLogger';
+
+const runtimeLog = createDebugLogger('notification-transport');
+
+const logCleanupFailure = (stage: string) => (error: unknown) => {
+  runtimeLog.warn('notification', `Notification transport ${stage} failed`, { error });
+};
 
 export type NotificationTransportProvider = 'unifiedpush' | 'native' | 'web';
 
@@ -66,7 +73,7 @@ export class NotificationTransportRuntime {
     this.#activeProvider = nextActiveProvider;
 
     if (previousCleanup) {
-      await Promise.resolve(previousCleanup()).catch(() => undefined);
+      await Promise.resolve(previousCleanup()).catch(logCleanupFailure('teardown'));
     }
 
     if (generation !== this.#activeGeneration) return;
@@ -74,7 +81,7 @@ export class NotificationTransportRuntime {
 
     const listener = await listenerFactory(getContext);
     if (generation !== this.#activeGeneration || nextActiveProvider !== this.#activeProvider) {
-      await Promise.resolve(listener.unregister()).catch(() => undefined);
+      await Promise.resolve(listener.unregister()).catch(logCleanupFailure('stale unregister'));
       return;
     }
 
@@ -88,6 +95,6 @@ export class NotificationTransportRuntime {
     this.#activeProvider = null;
 
     if (!cleanup) return;
-    await Promise.resolve(cleanup()).catch(() => undefined);
+    await Promise.resolve(cleanup()).catch(logCleanupFailure('dispose'));
   }
 }

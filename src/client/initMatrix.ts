@@ -35,11 +35,7 @@ import { pushSessionToSW } from '../sw-session';
 import { assertAuthMetadataIssuer, createSessionTokenRefresher } from './oidcTokenRefresher';
 import { revokeOAuthToken } from './oauthTokenRevocation';
 import { clearSecretStorageKeys, cryptoCallbacks } from './secretStorageKeys';
-import {
-  installRustCrypto,
-  isLegacyWasmCryptoStoreError,
-  rustEngineEnabled,
-} from '$app/crypto/install';
+import { ensureSdkCryptoCanStart } from '$app/crypto/install';
 import type { SlidingSyncDiagnostics } from './slidingSync';
 import {
   prepareSlidingSyncTimelines,
@@ -72,6 +68,10 @@ const presenceSyncByClient = new WeakMap<MatrixClient, PresenceSyncManager>();
 // application to prevent that, so track which client owns each store.
 const liveClientByCryptoStore = new Map<string, MatrixClient>();
 const cryptoStoreByClient = new WeakMap<MatrixClient, string>();
+const inFlightClientInitializationByCryptoStore = new Map<
+  string,
+  { sessionIdentity: string; promise: Promise<MatrixClient> }
+>();
 
 export const getCryptoStoreOwner = (storeKey: string): MatrixClient | undefined =>
   liveClientByCryptoStore.get(storeKey);
@@ -80,6 +80,9 @@ export const claimCryptoStore = (mx: MatrixClient, storeKey: string): void => {
   liveClientByCryptoStore.set(storeKey, mx);
   cryptoStoreByClient.set(mx, storeKey);
 };
+
+export const getClientCryptoStore = (mx: MatrixClient): string | undefined =>
+  cryptoStoreByClient.get(mx);
 
 export const releaseCryptoStore = (mx: MatrixClient): void => {
   const storeKey = cryptoStoreByClient.get(mx);
@@ -176,6 +179,7 @@ const startPresenceAfterInitialSync = (
 export const recheckKeyBackupAfterInitialSync = (mx: MatrixClient): void => {
   const recheck = () => {
     mx.removeListener(ClientEvent.Sync, onSync);
+    if (!mx.clientRunning) return;
     const crypto = mx.getCrypto();
     if (!crypto) return;
     crypto.checkKeyBackupAndEnable().catch((error: unknown) => {
@@ -342,6 +346,9 @@ const deleteSessionStores = async (storeName: SessionStoreName): Promise<void> =
     deleteDatabase(storeName.sync),
     deleteDatabase(storeName.crypto),
     deleteDatabase(`${storeName.rustCryptoPrefix}::matrix-sdk-crypto`),
+    deleteDatabase(`${storeName.rustCryptoPrefix}::matrix-sdk-crypto-meta`),
+    deleteDatabase(`${storeName.rustCryptoPrefixPerDevice}::matrix-sdk-crypto`),
+    deleteDatabase(`${storeName.rustCryptoPrefixPerDevice}::matrix-sdk-crypto-meta`),
   ]);
 };
 
@@ -377,6 +384,18 @@ const isMismatch = (err: unknown): boolean => {
     msg.includes('account in the constructor')
   );
 };
+
+const getSessionInitializationIdentity = (session: Session): string =>
+  JSON.stringify({
+    baseUrl: session.baseUrl,
+    userId: session.userId,
+    deviceId: session.deviceId,
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    fallbackSdkStores: session.fallbackSdkStores,
+    oidcIssuer: session.oidc?.issuer,
+    oidcClientId: session.oidc?.clientId,
+  });
 
 type BuiltClient = {
   mx: MatrixClient;
@@ -422,6 +441,53 @@ type ClientInitializationResult =
   | { ok: true; mx: MatrixClient }
   | { ok: false; error: unknown; phase: 'sync_store' | 'rust_crypto' };
 
+export const startupSyncStore = async (mx: MatrixClient, dbName: string): Promise<void> => {
+  try {
+    await mx.store.startup();
+    return;
+  } catch (error) {
+    await mx.store.destroy();
+    if (!(error instanceof Error) || error.message !== 'selectQuery failed for sync') throw error;
+    debugLog.warn('sync', 'Rebuilding unreadable sync snapshot', { error });
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const request = global.indexedDB.open(`matrix-js-sdk:${dbName}`);
+    request.addEventListener('error', () => reject(request.error));
+    request.addEventListener('upgradeneeded', () => request.transaction?.abort());
+    request.addEventListener('success', () => {
+      const db = request.result;
+      try {
+        const transaction = db.transaction('sync', 'readwrite');
+        transaction.addEventListener('complete', () => {
+          db.close();
+          resolve();
+        });
+        transaction.addEventListener('abort', () => {
+          db.close();
+          reject(transaction.error ?? new Error('Failed to clear sync snapshot'));
+        });
+        transaction.objectStore('sync').clear();
+      } catch (error) {
+        db.close();
+        reject(error);
+      }
+    });
+  });
+
+  mx.store = new IndexedDBStore({
+    indexedDB: global.indexedDB,
+    localStorage: global.localStorage,
+    dbName,
+  });
+  try {
+    await mx.store.startup();
+  } catch (error) {
+    await mx.store.destroy();
+    throw error;
+  }
+};
+
 const initializeClient = async (
   session: Session,
   cryptoDatabasePrefix: string
@@ -432,29 +498,18 @@ const initializeClient = async (
   } catch (error) {
     return { ok: false, error, phase: 'sync_store' };
   }
-  const { mx, indexedDBStore } = builtClient;
+  const { mx } = builtClient;
 
   void primeVersionsFromCache(mx, session.baseUrl, session.userId).then((primed) => {
     if (primed) void revalidateVersionsCache(mx, session.baseUrl, session.userId);
     else void cacheVersionsFromClient(mx, session.baseUrl, session.userId);
   });
 
-  const syncStorePromise = measureStartupPhase('sync_store', () => indexedDBStore.startup());
+  const syncStorePromise = measureStartupPhase('sync_store', () =>
+    startupSyncStore(mx, getSessionStoreName(session).sync)
+  );
   const cryptoPromise = measureStartupPhase('rust_crypto', async () => {
-    let nativeEngine: boolean;
-    try {
-      nativeEngine = await rustEngineEnabled(cryptoDatabasePrefix);
-    } catch (error) {
-      if (!isLegacyWasmCryptoStoreError(error)) throw error;
-      await mx.initRustCrypto({ cryptoDatabasePrefix });
-      error.client = mx;
-      throw error;
-    }
-
-    if (nativeEngine) {
-      await installRustCrypto(mx);
-      return;
-    }
+    await ensureSdkCryptoCanStart(session.userId, session.deviceId);
     await mx.initRustCrypto({ cryptoDatabasePrefix });
   });
   const [syncStoreResult, cryptoResult] = await Promise.allSettled([
@@ -467,46 +522,19 @@ const initializeClient = async (
     return { ok: false, error: syncStoreResult.reason, phase: 'sync_store' };
   }
   if (cryptoResult.status === 'rejected') {
-    if (!isLegacyWasmCryptoStoreError(cryptoResult.reason)) mx.stopClient();
+    mx.stopClient();
     return { ok: false, error: cryptoResult.reason, phase: 'rust_crypto' };
   }
 
   return { ok: true, mx };
 };
 
-export const initClient = async (session: Session): Promise<MatrixClient> => {
+const initializeSession = async (session: Session): Promise<MatrixClient> => {
   const storeName = getSessionStoreName(session);
   debugLog.info('sync', 'Initializing Matrix client', {
     userId: session.userId,
     baseUrl: session.baseUrl,
   });
-
-  const wipeAllStores = async () => {
-    log.warn('initClient: wiping all stores for', session.userId);
-    debugLog.warn('sync', 'Wiping all stores due to mismatch', {
-      userId: session.userId,
-    });
-    Sentry.addBreadcrumb({
-      category: 'crypto',
-      message: 'Crypto store mismatch — wiping local stores and retrying',
-      level: 'warning',
-    });
-    Sentry.metrics.count('sable.crypto.store_wipe', 1);
-    await deleteSessionStores(storeName);
-    try {
-      const allDbs = await window.indexedDB.databases();
-      await Promise.all(
-        allDbs.map(async ({ name }) => {
-          if (name && name.includes(session.userId)) {
-            log.warn('initClient: also wiping db', name);
-            await deleteDatabase(name);
-          }
-        })
-      );
-    } catch {
-      // databases() not available in all browsers
-    }
-  };
 
   const initStartTime = performance.now();
   let initOutcome = 'success';
@@ -522,14 +550,28 @@ export const initClient = async (session: Session): Promise<MatrixClient> => {
         throw result.error;
       }
 
-      log.warn(`initClient: mismatch during ${result.phase} — wiping and reloading:`, result.error);
-      debugLog.warn('sync', 'Client initialization mismatch - wiping stores and reloading', {
+      log.warn(
+        `initClient: mismatch during ${result.phase}; retrying on a device scoped crypto store`,
+        result.error
+      );
+      debugLog.warn('sync', 'Client initialization mismatch - using device scoped crypto store', {
         phase: result.phase,
         error: result.error,
       });
-      await wipeAllStores();
-      window.location.reload();
-      throw result.error;
+
+      evictPreviousCryptoStoreOwner(storeName.rustCryptoPrefixPerDevice);
+      const perDevice = await initializeClient(session, storeName.rustCryptoPrefixPerDevice);
+      if (!perDevice.ok) {
+        debugLog.error('sync', 'Failed to initialize client on device scoped crypto store', {
+          phase: perDevice.phase,
+          error: perDevice.error,
+        });
+        throw perDevice.error;
+      }
+
+      perDevice.mx.setMaxListeners(50);
+      claimCryptoStore(perDevice.mx, storeName.rustCryptoPrefixPerDevice);
+      return perDevice.mx;
     }
 
     result.mx.setMaxListeners(50);
@@ -546,6 +588,28 @@ export const initClient = async (session: Session): Promise<MatrixClient> => {
       attributes: { phase: 'client_init', outcome: initOutcome },
     });
   }
+};
+
+export const initClient = (session: Session): Promise<MatrixClient> => {
+  const cryptoStoreKey = getSessionStoreName(session).rustCryptoPrefix;
+  const sessionIdentity = getSessionInitializationIdentity(session);
+  const inFlight = inFlightClientInitializationByCryptoStore.get(cryptoStoreKey);
+  if (inFlight) {
+    if (inFlight.sessionIdentity === sessionIdentity) return inFlight.promise;
+    return Promise.reject(
+      new Error(
+        'A different session is already initializing encrypted storage. Retry after it finishes.'
+      )
+    );
+  }
+
+  const promise = initializeSession(session).finally(() => {
+    if (inFlightClientInitializationByCryptoStore.get(cryptoStoreKey)?.promise === promise) {
+      inFlightClientInitializationByCryptoStore.delete(cryptoStoreKey);
+    }
+  });
+  inFlightClientInitializationByCryptoStore.set(cryptoStoreKey, { sessionIdentity, promise });
+  return promise;
 };
 
 export type StartClientConfig = {
@@ -829,7 +893,9 @@ export const logoutClient = async (mx: MatrixClient, session?: Session) => {
     destroyLocalNotificationCache(session.userId);
     clearLocalNotificationCache(session.userId);
     const storeName: SessionStoreName = getSessionStoreName(session);
-    await mx.clearStores({ cryptoDatabasePrefix: storeName.rustCryptoPrefix });
+    await mx.clearStores({
+      cryptoDatabasePrefix: getClientCryptoStore(mx) ?? storeName.rustCryptoPrefix,
+    });
     await deleteSessionStores(storeName);
     await wipeNativeCryptoStore(session);
   } else {

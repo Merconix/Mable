@@ -189,6 +189,7 @@ const DIAGNOSTICS_REDACTED_URL = '[REDACTED_URL]';
 
 const DIAGNOSTICS_SENSITIVE_KEY_PATTERN =
   /(?:authorization|cookie|token|secret|password|passwd|credential|api[-_]?key)/i;
+const DIAGNOSTICS_SAFE_DATA_KEYS = new Set(['phase', 'error', 'reason']);
 const DIAGNOSTICS_URL_PATTERN = /\b[a-z][a-z0-9+.-]{1,15}:\/\/[^\s<>"']+/gi;
 const DIAGNOSTICS_AUTH_PATTERN = /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi;
 const DIAGNOSTICS_SENSITIVE_VALUE_PATTERN =
@@ -223,6 +224,18 @@ const sanitizeDiagnosticsHeaders = (value: DiagnosticsJsonValue): DiagnosticsJso
   return sanitizeDiagnosticsJsonValue(value) ?? null;
 };
 
+const sanitizeDiagnosticsData = (value: DiagnosticsJsonValue): DiagnosticsJsonValue | undefined => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const sanitized: DiagnosticsJsonObject = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (!DIAGNOSTICS_SAFE_DATA_KEYS.has(key)) continue;
+    const safeChild = sanitizeDiagnosticsJsonValue(child);
+    if (safeChild !== undefined) sanitized[key] = safeChild;
+  }
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+};
+
 const sanitizeDiagnosticsJsonValue = (
   value: DiagnosticsJsonValue
 ): DiagnosticsJsonValue | undefined => {
@@ -233,7 +246,11 @@ const sanitizeDiagnosticsJsonValue = (
 
   const sanitized: DiagnosticsJsonObject = {};
   for (const [key, child] of Object.entries(value)) {
-    if (key.toLowerCase() === 'data') continue;
+    if (key.toLowerCase() === 'data') {
+      const safeData = sanitizeDiagnosticsData(child);
+      if (safeData !== undefined) sanitized[key] = safeData;
+      continue;
+    }
     if (key.toLowerCase() === 'headers') {
       sanitized[key] = sanitizeDiagnosticsHeaders(child);
       continue;

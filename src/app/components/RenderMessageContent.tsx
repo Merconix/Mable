@@ -449,8 +449,12 @@ function RenderMessageContentInternal({
     const strippedContent = pmp
       ? {
           ...content,
-          formatted_body: stripPerMessageProfileFormattedBody(content['formatted_body'] as string),
-          body: stripPerMessageProfilePlainBody(content['body'] as string),
+          ...(typeof content['formatted_body'] === 'string'
+            ? { formatted_body: stripPerMessageProfileFormattedBody(content['formatted_body']) }
+            : {}),
+          ...(typeof content['body'] === 'string'
+            ? { body: stripPerMessageProfilePlainBody(content['body']) }
+            : {}),
         }
       : content;
 

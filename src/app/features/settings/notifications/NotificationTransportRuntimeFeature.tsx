@@ -110,6 +110,7 @@ export function NotificationTransportRuntimeFeature() {
   const upConfigRef = useRef<{
     unifiedPushAppID?: string;
     unifiedPushGatewayUrl?: string;
+    unifiedPushEmbeddedServerUrl?: string;
     vapidPublicKey?: string;
     webPushAppID?: string;
     pushNotifyUrl?: string;
@@ -119,10 +120,16 @@ export function NotificationTransportRuntimeFeature() {
   upConfigRef.current = {
     unifiedPushAppID:
       pushTransportOverride?.unifiedPushAppID ??
+      clientConfig.pushTransport?.unifiedPushAppID ??
       clientConfig.pushNotificationDetails?.unifiedPushAppID,
     unifiedPushGatewayUrl:
       pushTransportOverride?.unifiedPushGatewayUrl ??
+      clientConfig.pushTransport?.unifiedPushGatewayUrl ??
       clientConfig.pushNotificationDetails?.unifiedPushGatewayUrl,
+    unifiedPushEmbeddedServerUrl:
+      pushTransportOverride?.unifiedPushEmbeddedServerUrl ??
+      clientConfig.pushTransport?.unifiedPushEmbeddedServerUrl ??
+      clientConfig.pushNotificationDetails?.unifiedPushEmbeddedServerUrl,
     vapidPublicKey: clientConfig.pushNotificationDetails?.vapidPublicKey,
     webPushAppID: clientConfig.pushNotificationDetails?.webPushAppID,
     pushNotifyUrl: clientConfig.pushNotificationDetails?.pushNotifyUrl,

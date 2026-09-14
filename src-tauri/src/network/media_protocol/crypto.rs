@@ -44,21 +44,21 @@ impl EncryptionStore {
         version: &str,
         content_type: String,
     ) -> Result<(), String> {
-        let key_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        let key_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD_INDIFFERENT
             .decode(key)
             .map_err(|error| format!("invalid key base64url: {error}"))?;
         let key = key_bytes
             .try_into()
             .map_err(|bytes: Vec<u8>| format!("key must be 32 bytes, got {}", bytes.len()))?;
 
-        let iv_bytes = base64::engine::general_purpose::STANDARD_NO_PAD
+        let iv_bytes = base64::engine::general_purpose::STANDARD_NO_PAD_INDIFFERENT
             .decode(iv)
             .map_err(|error| format!("invalid iv base64: {error}"))?;
         let iv = iv_bytes
             .try_into()
             .map_err(|bytes: Vec<u8>| format!("iv must be 16 bytes, got {}", bytes.len()))?;
 
-        let expected_sha256 = base64::engine::general_purpose::STANDARD_NO_PAD
+        let expected_sha256 = base64::engine::general_purpose::STANDARD_NO_PAD_INDIFFERENT
             .decode(sha256)
             .map_err(|error| format!("invalid sha256 base64: {error}"))?;
 
@@ -168,7 +168,30 @@ pub(super) fn normalize_key(url: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_key;
+    use super::{normalize_key, EncryptionStore};
+
+    #[test]
+    fn register_accepts_padded_base64() {
+        let store = EncryptionStore::default();
+        let url = "https://matrix.example.org/_matrix/client/v1/media/download/matrix.org/abc123";
+        for (key, iv, sha256) in [
+            (
+                "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+                "G+qzsN3Y9FgAAAAAAAAAAA",
+                "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8",
+            ),
+            (
+                "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+                "G+qzsN3Y9FgAAAAAAAAAAA==",
+                "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=",
+            ),
+        ] {
+            assert_eq!(
+                store.register(url, key, iv, sha256, "v2", String::new()),
+                Ok(())
+            );
+        }
+    }
 
     #[test]
     fn normalize_key_strips_sable_media_prefix() {

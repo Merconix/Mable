@@ -14,6 +14,13 @@ describe('getCallCapabilities', () => {
     expect(capabilities.has(MatrixCapabilities.MSC4157UpdateDelayedEvent)).toBe(true);
   });
 
+  it('includes sticky-event capabilities', () => {
+    const capabilities = getCallCapabilities(roomId, userId, deviceId);
+
+    expect(capabilities.has(MatrixCapabilities.MSC4407SendStickyEvent)).toBe(true);
+    expect(capabilities.has(MatrixCapabilities.MSC4407ReceiveStickyEvent)).toBe(true);
+  });
+
   it('includes upload and download media capabilities', () => {
     const capabilities = getCallCapabilities(roomId, userId, deviceId);
 

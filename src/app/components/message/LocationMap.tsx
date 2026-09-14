@@ -3,6 +3,7 @@ import type { LatLngExpression } from 'leaflet';
 import markerIconPng from 'leaflet/dist/images/marker-icon.png';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, Marker, TileLayer } from 'react-leaflet';
+import { getTileUrl, TILE_ATTRIBUTION } from '$utils/tileUrl';
 
 const markerIcon = new Icon({
   iconUrl: markerIconPng,
@@ -26,10 +27,7 @@ export function LocationMap({ coordinates, className }: LocationMapProps) {
       className={className}
       attributionControl
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <TileLayer attribution={TILE_ATTRIBUTION} url={getTileUrl()} />
       <Marker
         position={position}
         eventHandlers={{

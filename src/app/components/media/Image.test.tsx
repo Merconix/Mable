@@ -8,6 +8,50 @@ import { DecompressionStream as NodeDecompressionStream } from 'node:stream/web'
 
 vi.stubGlobal('Blob', NodeBlob);
 vi.stubGlobal('DecompressionStream', NodeDecompressionStream);
+vi.mock('@lottiefiles/dotlottie-react', async () => {
+  const React = await import('react');
+
+  type MockPlayer = {
+    canvas: HTMLCanvasElement;
+    isLoaded: boolean;
+    addEventListener: () => void;
+    removeEventListener: () => void;
+  };
+  type MockProps = Record<string, unknown> & {
+    dotLottieRefCallback?: (player: MockPlayer | null) => void;
+  };
+
+  return {
+    setWasmUrl: vi.fn<(url: string) => void>(),
+    DotLottieReact: ({
+      dotLottieRefCallback,
+      data: _data,
+      backgroundColor: _backgroundColor,
+      autoplay: _autoplay,
+      ...props
+    }: MockProps) => {
+      const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+      React.useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          dotLottieRefCallback?.({
+            canvas,
+            isLoaded: false,
+            addEventListener: () => {},
+            removeEventListener: () => {},
+          });
+        }
+
+        return () => {
+          dotLottieRefCallback?.(null);
+        };
+      }, [dotLottieRefCallback]);
+
+      return <canvas {...props} ref={canvasRef} />;
+    },
+  };
+});
 vi.stubGlobal(
   'IntersectionObserver',
   class {

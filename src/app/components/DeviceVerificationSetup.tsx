@@ -158,6 +158,12 @@ function SetupVerification({ onComplete, reset }: Readonly<SetupVerificationProp
         const crypto = mx.getCrypto();
         if (!crypto) throw new Error('Unexpected Error! Crypto module not found!');
 
+        if (!reset && (await crypto.userHasCrossSigningKeys(mx.getSafeUserId(), true))) {
+          throw new Error(
+            'This account already has device verification set up. Verify with your recovery key or another device instead.'
+          );
+        }
+
         const recoveryKeyData = await crypto.createRecoveryKeyFromPassphrase(passphrase);
         if (!recoveryKeyData.encodedPrivateKey) {
           throw new Error('Unexpected Error! Failed to create recovery key.');

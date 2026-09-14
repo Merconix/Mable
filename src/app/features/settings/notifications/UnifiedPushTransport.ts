@@ -1,5 +1,8 @@
+import { createDebugLogger } from '$utils/debugLogger';
 import type { PushAccount } from './pushAccount';
 import { getUnifiedPushTransportApi } from './UnifiedPushTransportApiClient';
+
+const transportLog = createDebugLogger('unifiedpush-transport');
 
 export type UnifiedPushPermissionState = 'granted' | 'denied' | 'default';
 
@@ -196,6 +199,11 @@ export async function switchUnifiedPushDistributorSelection<T>(
   try {
     return await register();
   } catch (error) {
+    transportLog.error('notification', 'UnifiedPush distributor switch failed, reverting', {
+      nextDistributor,
+      previousDistributor,
+      error,
+    });
     await saveUnifiedPushDistributor(previousDistributor);
     throw error;
   }
@@ -228,6 +236,9 @@ export async function registerUnifiedPushTransport(
     // With a gateway configured the app is its own distributor, so an empty list is
     // no longer a dead end.
     if (!distributor && !embeddedGatewayUrl?.trim()) {
+      transportLog.error('notification', 'UnifiedPush registration has no usable distributor', {
+        installedCount: distributors.length,
+      });
       return {
         status: 'missing-distributor',
         permissionState: 'granted',
@@ -247,6 +258,10 @@ export async function registerUnifiedPushTransport(
     );
     const endpoint = registration?.deviceToken;
     if (!endpoint || !endpoint.trim()) {
+      transportLog.error('notification', 'UnifiedPush registration returned no endpoint', {
+        distributor: registration?.distributor ?? selectedDistributor,
+        hasEmbeddedGateway: !!embeddedGatewayUrl?.trim(),
+      });
       return {
         status: 'hard-failure',
         permissionState: 'granted',
@@ -265,6 +280,11 @@ export async function registerUnifiedPushTransport(
     };
   } catch (error) {
     const failureStatus = classifyUnifiedPushFailure(error);
+    transportLog.error('notification', `UnifiedPush registration failed (${failureStatus})`, {
+      distributor: selectedDistributor,
+      hasEmbeddedGateway: !!embeddedGatewayUrl?.trim(),
+      error,
+    });
     return {
       status: failureStatus,
       permissionState,

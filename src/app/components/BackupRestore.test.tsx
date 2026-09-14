@@ -9,7 +9,10 @@ import { BackupRestoreTile } from './BackupRestore';
 const decodeRecoveryKey = vi.hoisted(() => vi.fn<(key: string) => Uint8Array>());
 const emitter = new TypedEventEmitter<string, Record<string, (...args: never[]) => void>>();
 const mockClient = Object.assign(emitter, {
-  secretStorage: { checkKey: vi.fn<() => Promise<boolean>>().mockResolvedValue(true) },
+  secretStorage: {
+    checkKey: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
+    get: vi.fn<(name: string) => Promise<string | undefined>>().mockResolvedValue('stored-key'),
+  },
   getSafeUserId: () => '@me:example.org',
   getDeviceId: () => 'DEVICE',
 });

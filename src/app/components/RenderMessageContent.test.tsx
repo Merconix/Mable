@@ -222,4 +222,14 @@ describe('RenderMessageContent', () => {
 
     expect(screen.getByTestId('poll-event')).toBeInTheDocument();
   });
+
+  it('renders a per-message profile emote without a formatted body', () => {
+    renderMessageWithContent({
+      msgtype: MsgType.Emote,
+      body: 'Bob: waves',
+      'com.beeper.per_message_profile': { id: 'bob', displayname: 'Bob' },
+    });
+
+    expect(screen.getByText('waves')).toBeInTheDocument();
+  });
 });

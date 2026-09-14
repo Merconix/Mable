@@ -46,6 +46,7 @@ import {
   menuIcon,
 } from '$components/icons/phosphor';
 import { InfoCard } from './info-card';
+import { restoreCrossSigningFromSecretStorage } from '$utils/matrix-crypto';
 
 type BackupKeyRecoveryProps = {
   crypto: CryptoApi;
@@ -70,7 +71,7 @@ function BackupKeyRecovery({
         storePrivateKey(secretStorageKeyId, recoveryKey);
 
         await cryptoBackend.processDeviceLists({ changed: [mx.getSafeUserId()] });
-        await cryptoBackend.bootstrapCrossSigning({});
+        await restoreCrossSigningFromSecretStorage(mx, cryptoBackend);
         await cryptoBackend.bootstrapSecretStorage({});
 
         // Emits KeyBackupDecryptionKeyCached, which drives the restore.

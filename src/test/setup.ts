@@ -32,3 +32,12 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     },
   })) as typeof window.matchMedia;
 }
+
+function elementScrollTo(this: Element, optionsOrX?: ScrollToOptions | number, y?: number) {
+  const top = typeof optionsOrX === 'number' ? y : optionsOrX?.top;
+  if (top !== undefined) this.scrollTop = top;
+}
+
+if (typeof Element !== 'undefined' && !Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = elementScrollTo as typeof Element.prototype.scrollTo;
+}

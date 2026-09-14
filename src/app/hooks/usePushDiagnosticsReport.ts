@@ -12,6 +12,12 @@ const report = async (): Promise<void> => {
 
   entries.forEach(([outcome, occurrences]) => {
     Sentry.metrics.count('sable.push.cold_outcome', occurrences, { attributes: { outcome } });
+    Sentry.logger.info('Native push diagnostic', {
+      outcome,
+      occurrences,
+      lastOutcome: diagnostics.lastOutcome ?? '',
+      lastAt: diagnostics.lastAt,
+    });
   });
 
   Sentry.addBreadcrumb({
@@ -31,9 +37,13 @@ export const usePushDiagnosticsReport = (): void => {
       void report();
     };
 
+    const interval = window.setInterval(drain, 30_000);
     document.addEventListener('visibilitychange', drain);
     drain();
 
-    return () => document.removeEventListener('visibilitychange', drain);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', drain);
+    };
   }, []);
 };

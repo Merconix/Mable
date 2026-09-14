@@ -12,7 +12,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": "default-src 'self' blob: data: filesystem: tauri:; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' filesystem: tauri:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' blob: data: filesystem: http: https: tauri:; font-src 'self' blob: data: filesystem: http: https: tauri:; img-src 'self' data: blob: filesystem: http: https: sable-media:; media-src 'self' blob: data: http: https: sable-media:; frame-src 'self' blob: http: https: tauri:; connect-src 'self' ipc: ws: wss: http: https: http://ipc.localhost sable-media: http://sable-media.localhost; object-src 'none'; base-uri 'self'; form-action 'self'"
+      "csp": "default-src 'self' blob: data: filesystem: tauri:; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' filesystem: tauri:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' blob: data: filesystem: http: https: tauri:; font-src 'self' blob: data: filesystem: http: https: tauri:; img-src 'self' data: blob: filesystem: http: https: sable-media: sable-tiles:; media-src 'self' blob: data: http: https: sable-media:; frame-src 'self' blob: http: https: tauri:; connect-src 'self' ipc: ws: wss: http: https: http://ipc.localhost sable-media: http://sable-media.localhost; object-src 'none'; base-uri 'self'; form-action 'self'"
     }
   },
   "bundle": {

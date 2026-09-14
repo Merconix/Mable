@@ -1,76 +1,114 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isTauri } from '@tauri-apps/api/core';
-import { EventEmitter } from 'events';
-import { CryptoEvent } from 'matrix-js-sdk/lib/crypto-api';
-import { LegacyWasmCryptoStoreError, reEmitCryptoEvents, rustEngineEnabled } from './install';
+import {
+  engineClose,
+  engineInvoke,
+  engineOpen,
+  engineStoreExists,
+} from '$generated/tauri/commands';
+import {
+  ensureSdkCryptoCanStart,
+  isNativeCryptoStoreError,
+  NativeCryptoStoreError,
+} from './install';
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn<() => boolean>() }));
-
 vi.mock('$generated/tauri/commands', () => ({
-  engineOpen: vi.fn<(...args: never[]) => unknown>(),
+  engineClose: vi.fn<typeof engineClose>(),
+  engineInvoke: vi.fn<typeof engineInvoke>(),
+  engineOpen: vi.fn<typeof engineOpen>(),
+  engineStoreExists: vi.fn<typeof engineStoreExists>(),
 }));
 
 const mockIsTauri = vi.mocked(isTauri);
+const mockEngineClose = vi.mocked(engineClose);
+const mockEngineInvoke = vi.mocked(engineInvoke);
+const mockEngineOpen = vi.mocked(engineOpen);
+const mockEngineStoreExists = vi.mocked(engineStoreExists);
 
-describe('rustEngineEnabled', () => {
+describe('ensureSdkCryptoCanStart', () => {
   beforeEach(() => {
-    mockIsTauri.mockReset();
+    vi.resetAllMocks();
   });
 
-  it('keeps WASM crypto for non-Tauri clients', async () => {
+  it('starts SDK crypto outside Tauri without inspecting a native store', async () => {
     mockIsTauri.mockReturnValue(false);
 
-    await expect(rustEngineEnabled('sync@alice:example.org')).resolves.toBe(false);
+    await expect(ensureSdkCryptoCanStart('@alice:example.org', 'ALICE')).resolves.toBeUndefined();
+
+    expect(mockEngineStoreExists).not.toHaveBeenCalled();
   });
 
-  it('enables the native engine when no legacy crypto store exists', async () => {
+  it('starts SDK crypto when no native store exists', async () => {
     mockIsTauri.mockReturnValue(true);
-    const databases = vi.fn<() => Promise<IDBDatabaseInfo[]>>().mockResolvedValue([]);
-    vi.stubGlobal('indexedDB', { databases });
+    mockEngineStoreExists.mockResolvedValue(false);
 
-    await expect(rustEngineEnabled('sync@alice:example.org')).resolves.toBe(true);
-    expect(databases).toHaveBeenCalledOnce();
+    await expect(ensureSdkCryptoCanStart('@alice:example.org', 'ALICE')).resolves.toBeUndefined();
   });
 
-  it('requires re-authentication instead of retaining a legacy WASM engine', async () => {
+  it('blocks SDK initialization when a native store exists', async () => {
     mockIsTauri.mockReturnValue(true);
-    vi.stubGlobal('indexedDB', {
-      databases: vi
-        .fn<() => Promise<IDBDatabaseInfo[]>>()
-        .mockResolvedValue([{ name: 'sync@alice:example.org::matrix-sdk-crypto' }]),
-    });
+    mockEngineStoreExists.mockResolvedValue(true);
 
-    await expect(rustEngineEnabled('sync@alice:example.org')).rejects.toBeInstanceOf(
-      LegacyWasmCryptoStoreError
-    );
-  });
-
-  it('requires re-authentication when the legacy store cannot be inspected safely', async () => {
-    mockIsTauri.mockReturnValue(true);
-    vi.stubGlobal('indexedDB', {});
-
-    await expect(rustEngineEnabled('sync@alice:example.org')).rejects.toBeInstanceOf(
-      LegacyWasmCryptoStoreError
+    await expect(ensureSdkCryptoCanStart('@alice:example.org', 'ALICE')).rejects.toBeInstanceOf(
+      NativeCryptoStoreError
     );
   });
 });
 
-describe('reEmitCryptoEvents', () => {
-  it('forwards SDK crypto events to MatrixClient and detaches them on stop', () => {
-    const mx = new EventEmitter();
-    const rustCrypto = new EventEmitter();
-    const listener = vi.fn<(request: unknown) => void>();
-    mx.on(CryptoEvent.VerificationRequestReceived, listener);
+describe('NativeCryptoStoreError', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
 
-    const stop = reEmitCryptoEvents(mx as never, rustCrypto as never);
-    const request = { transactionId: 'verification-request' };
-    rustCrypto.emit(CryptoEvent.VerificationRequestReceived, request);
+  it('exports the unwrapped room-key JSON and closes the native store', async () => {
+    mockEngineStoreExists.mockResolvedValue(true);
+    mockEngineOpen.mockResolvedValue({} as never);
+    mockEngineInvoke.mockResolvedValue(JSON.stringify('[{"session_id":"session"}]'));
+    mockEngineClose.mockResolvedValue(true);
+    const error = new NativeCryptoStoreError('@alice:example.org', 'ALICE');
 
-    expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith(request, rustCrypto);
+    await expect(error.exportRoomKeys()).resolves.toBe('[{"session_id":"session"}]');
 
-    stop();
-    rustCrypto.emit(CryptoEvent.VerificationRequestReceived, request);
-    expect(listener).toHaveBeenCalledOnce();
+    expect(mockEngineInvoke).toHaveBeenCalledWith({
+      userId: '@alice:example.org',
+      deviceId: 'ALICE',
+      method: 'exportRoomKeys',
+      argsJson: '{}',
+    });
+    expect(mockEngineClose).toHaveBeenCalledWith({
+      userId: '@alice:example.org',
+      deviceId: 'ALICE',
+    });
+  });
+
+  it('does not create a native store after it has disappeared', async () => {
+    mockEngineStoreExists.mockResolvedValue(false);
+    const error = new NativeCryptoStoreError('@alice:example.org', 'ALICE');
+
+    await expect(error.exportRoomKeys()).rejects.toThrow('no longer available');
+
+    expect(mockEngineOpen).not.toHaveBeenCalled();
+  });
+
+  it('closes the native store when export fails', async () => {
+    mockEngineStoreExists.mockResolvedValue(true);
+    mockEngineOpen.mockResolvedValue({} as never);
+    mockEngineInvoke.mockRejectedValue(new Error('export failed'));
+    mockEngineClose.mockResolvedValue(true);
+    const error = new NativeCryptoStoreError('@alice:example.org', 'ALICE');
+
+    await expect(error.exportRoomKeys()).rejects.toThrow('export failed');
+
+    expect(mockEngineClose).toHaveBeenCalledWith({
+      userId: '@alice:example.org',
+      deviceId: 'ALICE',
+    });
+  });
+
+  it('identifies the recovery error', () => {
+    expect(
+      isNativeCryptoStoreError(new NativeCryptoStoreError('@alice:example.org', 'ALICE'))
+    ).toBe(true);
   });
 });

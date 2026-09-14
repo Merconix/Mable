@@ -371,6 +371,7 @@ pub fn run() {
     let builder = builder
         .plugin(tauri_plugin_app_icon::init())
         .plugin(tauri_plugin_edge_to_edge::init())
+        .plugin(tauri_plugin_geolocation::init())
         .plugin(tauri_plugin_sharekit::init())
         .plugin(tauri_plugin_livekit_mobile::init());
 
@@ -388,6 +389,10 @@ pub fn run() {
             network::media_protocol::MEDIA_URI_SCHEME,
             network::media_protocol::respond,
         )
+        .register_asynchronous_uri_scheme_protocol(
+            network::map_tiles::TILE_URI_SCHEME,
+            network::map_tiles::respond,
+        )
         .setup(|app| {
             #[cfg(target_os = "android")]
             mobile::set_app_handle(app.handle().clone());
@@ -402,6 +407,7 @@ pub fn run() {
             }
 
             network::native_upload::cleanup_uploads(app.handle());
+            network::map_tiles::cleanup_cache(app.handle());
 
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
             {
@@ -471,7 +477,7 @@ pub fn run() {
             #[cfg(feature = "matrix-crypto")]
             matrix_crypto::engine_wipe,
             #[cfg(feature = "matrix-crypto")]
-            matrix_crypto::push::engine_decrypt_push,
+            matrix_crypto::engine_store_exists,
             share_inbox::share_inbox_drain,
             share_inbox::share_inbox_read,
             share_inbox::share_inbox_clear,

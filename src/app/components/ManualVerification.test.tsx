@@ -7,6 +7,7 @@ import { ManualVerificationTile } from './ManualVerification';
 
 const decodeRecoveryKey = vi.hoisted(() => vi.fn<(key: string) => Uint8Array>());
 const checkKey = vi.hoisted(() => vi.fn<() => Promise<boolean>>());
+const getSecret = vi.hoisted(() => vi.fn<(name: string) => Promise<string | undefined>>());
 const storePrivateKey = vi.hoisted(() => vi.fn<() => void>());
 const processDeviceLists = vi.hoisted(() => vi.fn<() => Promise<void>>());
 const bootstrapCrossSigning = vi.hoisted(() => vi.fn<() => Promise<void>>());
@@ -19,7 +20,7 @@ vi.mock('$hooks/useMatrixClient', () => ({
   useMatrixClient: () => ({
     getSafeUserId: () => '@me:example.org',
     getDeviceId: () => 'DEVICE',
-    secretStorage: { checkKey },
+    secretStorage: { checkKey, get: getSecret },
     getCrypto: () =>
       ({
         processDeviceLists,
@@ -54,6 +55,7 @@ describe('ManualVerificationTile', () => {
     vi.clearAllMocks();
     decodeRecoveryKey.mockReturnValue(recoveryKey);
     checkKey.mockResolvedValue(true);
+    getSecret.mockResolvedValue('stored-key');
     processDeviceLists.mockResolvedValue(undefined);
     bootstrapCrossSigning.mockResolvedValue(undefined);
     bootstrapSecretStorage.mockResolvedValue(undefined);
@@ -83,5 +85,18 @@ describe('ManualVerificationTile', () => {
 
     await waitFor(() => expect(screen.getByText('Device verified!')).toBeInTheDocument());
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['device-verification'] });
+  });
+
+  it('does not bootstrap when the cross-signing keys are missing from secret storage', async () => {
+    getSecret.mockResolvedValue(undefined);
+    renderTile(new QueryClient());
+
+    submitRecoveryKey('valid-key');
+
+    await waitFor(() =>
+      expect(screen.getByText(/Could not read your cross-signing keys/)).toBeInTheDocument()
+    );
+    expect(bootstrapCrossSigning).not.toHaveBeenCalled();
+    expect(bootstrapSecretStorage).not.toHaveBeenCalled();
   });
 });

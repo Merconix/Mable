@@ -175,6 +175,59 @@ export class CallWidgetDriver extends WidgetDriver {
     };
   }
 
+  public async sendStickyEvent(
+    stickyDurationMs: number,
+    eventType: string,
+    content: IContent,
+    targetRoomId: string | null = null
+  ): Promise<ISendEventDetails> {
+    const client = this.mx;
+    const roomId = targetRoomId || this.inRoomId;
+
+    if (!client || !roomId) throw new Error('Not in a room or not attached to a client');
+
+    const r = await client._unstable_sendStickyEvent(
+      roomId,
+      stickyDurationMs,
+      null,
+      eventType as keyof TimelineEvents,
+      content as TimelineEvents[keyof TimelineEvents]
+    );
+
+    return { roomId, eventId: r.event_id };
+  }
+
+  public async sendDelayedStickyEvent(
+    delay: number,
+    stickyDurationMs: number,
+    eventType: string,
+    content: IContent,
+    targetRoomId: string | null = null
+  ): Promise<ISendDelayedEventDetails> {
+    const client = this.mx;
+    const roomId = targetRoomId || this.inRoomId;
+
+    if (!client || !roomId) throw new Error('Not in a room or not attached to a client');
+
+    const r = await client._unstable_sendStickyDelayedEvent(
+      roomId,
+      stickyDurationMs,
+      { delay },
+      null,
+      eventType as keyof TimelineEvents,
+      content as TimelineEvents[keyof TimelineEvents]
+    );
+
+    return { roomId, delayId: r.delay_id };
+  }
+
+  public async readStickyEvents(roomId: string): Promise<IRoomEvent[]> {
+    const room = this.mx.getRoom(roomId);
+    if (room === null) return [];
+
+    return [...room._unstable_getStickyEvents()].map((e) => e.getEffectiveEvent() as IRoomEvent);
+  }
+
   public async updateDelayedEvent(
     delayId: string,
     action: UpdateDelayedEventAction

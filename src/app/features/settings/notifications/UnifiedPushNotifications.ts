@@ -3,6 +3,9 @@ import {
   type MatrixClient,
   MatrixEvent,
   MatrixEventEvent,
+  type CryptoApi,
+  type CryptoBackend,
+  type IContent,
 } from '$types/matrix-sdk';
 import { EventType } from 'matrix-js-sdk/lib/@types/event';
 import {
@@ -13,9 +16,7 @@ import { fetch } from '$utils/fetch';
 import { getMxIdLocalPart } from '$utils/matrix';
 import { getStateEvent } from '$utils/room/hierarchy';
 import { createDebugLogger } from '$utils/debugLogger';
-import type { DecryptedPushEvent } from '$app/crypto/pushDecrypt';
-import { decryptPushEventNatively } from '$app/crypto/pushDecrypt';
-import { pushAccount, type PushAccount } from './pushAccount';
+import { pushAccount } from './pushAccount';
 import {
   registerUnifiedPushTransport,
   type UnifiedPushRegistrationResult,
@@ -66,8 +67,6 @@ type UnifiedPushPayload = {
   notification?: unknown;
   [key: string]: unknown;
 };
-
-const UP_REGISTER_TIMEOUT_MS = 30_000;
 
 // Android freezes a channel's importance at creation, so raising `messages` from
 // Default to High needs a new id. Mirrored in the plugin's UnifiedPushNotifier.
@@ -134,30 +133,6 @@ export type EnableUnifiedPushResult =
     }
   | Exclude<UnifiedPushRegistrationResult, { status: 'registered' }>;
 
-async function registerUnifiedPushWithTimeout(
-  vapid?: string,
-  embeddedServerUrl?: string,
-  account?: PushAccount
-): Promise<UnifiedPushRegistrationResult> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error('UnifiedPush registration timed out'));
-    }, UP_REGISTER_TIMEOUT_MS);
-  });
-
-  try {
-    return await Promise.race([
-      registerUnifiedPushTransport(vapid, embeddedServerUrl, account),
-      timeout,
-    ]);
-  } finally {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-  }
-}
-
 /**
  * A provider that speaks the Matrix push protocol answers `/_matrix/push/v1/notify`
  * with `unifiedpush.gateway == "matrix"`. Preferring it keeps delivery on the provider
@@ -206,7 +181,7 @@ export async function tryEnableUnifiedPush(
   // MSC4174: subscribe with the homeserver VAPID key when it pushes directly.
   const webPushSupport = await getWebPushServerSupport(mx);
   const vapid = webPushSupport.supported ? webPushSupport.vapidPublicKey : config?.vapidPublicKey;
-  const registration = await registerUnifiedPushWithTimeout(
+  const registration = await registerUnifiedPushTransport(
     vapid,
     trimConfigValue(config?.unifiedPushEmbeddedServerUrl) ?? DEFAULT_EMBEDDED_GATEWAY,
     pushAccount(mx)
@@ -437,6 +412,12 @@ type NotifMessage = {
   sender?: NotifPerson;
 };
 
+type DecryptedPushEvent = {
+  eventType: string;
+  content: IContent;
+  sender?: string;
+};
+
 function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i += 1) {
@@ -454,9 +435,7 @@ async function resolvePreviewEvent(
   try {
     const evt = await mx.fetchRoomEvent(roomId, eventId);
     const mEvent = new MatrixEvent(evt);
-    if (mEvent.isEncrypted()) {
-      await mx.decryptEventIfNeeded(mEvent);
-    }
+    if (mEvent.isEncrypted()) await mx.decryptEventIfNeeded(mEvent).catch(() => undefined);
     return mEvent;
   } catch (error) {
     unifiedPushLog.warn(
@@ -494,30 +473,74 @@ function holdsPlaintext(event: MatrixEvent): boolean {
   );
 }
 
-/**
- * Runs `apply` as soon as `event` holds plaintext: right away when it is already
- * decrypted, or later once the Megolm key arrives — a backgrounded app routinely
- * receives the push before the to-device key, and the SDK retries decryption on
- * its own when the key lands.
- */
-function whenDecrypted(event: MatrixEvent, apply: () => Promise<void>): void {
+const DECRYPT_RETRY_DELAYS_MS = [1000, 2000, 5000, 10_000, 30_000, 60_000] as const;
+
+const FINAL_DECRYPT_ATTEMPT_TIMEOUT_MS = 10_000;
+
+const supportsEventDecryption = (crypto: CryptoApi | undefined): crypto is CryptoBackend =>
+  !!crypto && 'decryptEvent' in crypto && typeof crypto.decryptEvent === 'function';
+
+function whenDecrypted(event: MatrixEvent, apply: () => Promise<void>, mx: MatrixClient): void {
   if (holdsPlaintext(event)) {
     void apply();
     return;
   }
 
+  let retryIndex = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let finished = false;
+  const retryDeadline = Date.now() + ENCRYPTED_PREVIEW_RETRY_WINDOW_MS;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    event.off(MatrixEventEvent.Decrypted, onDecrypted);
+    clearTimeout(retryTimer);
+  };
   const onDecrypted = () => {
     if (!holdsPlaintext(event)) return;
-    event.off(MatrixEventEvent.Decrypted, onDecrypted);
-    clearTimeout(retryWindowTimer);
+    finish();
     void apply();
   };
 
   event.on(MatrixEventEvent.Decrypted, onDecrypted);
-  const retryWindowTimer = setTimeout(() => {
-    event.off(MatrixEventEvent.Decrypted, onDecrypted);
-    unifiedPushLog.warn('notification', 'Encrypted preview never decrypted within retry window');
-  }, ENCRYPTED_PREVIEW_RETRY_WINDOW_MS);
+  const giveUp = () => {
+    if (finished) return;
+    finish();
+    unifiedPushLog.warn('notification', 'Encrypted preview never decrypted within retry window', {
+      roomId: event.getRoomId(),
+      sessionId: event.getWireContent().session_id,
+      attempts: retryIndex,
+    });
+  };
+  const retry = () => {
+    if (finished) return;
+    const crypto = mx.getCrypto();
+    const attempt = supportsEventDecryption(crypto)
+      ? event.attemptDecryption(crypto, { isRetry: true }).catch(() => undefined)
+      : undefined;
+
+    const remaining = retryDeadline - Date.now();
+    if (remaining > 0) {
+      // Sync is what carries the room key, and a backgrounded client only keeps
+      // it running while a push drain is outstanding.
+      getSlidingSyncManager(mx)?.requestPushDrain();
+      const delay = DECRYPT_RETRY_DELAYS_MS[retryIndex] ?? 60_000;
+      retryTimer = setTimeout(retry, Math.min(delay, remaining));
+      retryIndex += 1;
+      return;
+    }
+
+    // The window can lapse on a tick that runs long after the key landed, so
+    // settle on this last attempt rather than on the clock.
+    if (!attempt) {
+      giveUp();
+      return;
+    }
+    retryTimer = setTimeout(giveUp, FINAL_DECRYPT_ATTEMPT_TIMEOUT_MS);
+    void attempt.then(giveUp);
+  };
+  retryTimer = setTimeout(retry, DECRYPT_RETRY_DELAYS_MS[0]);
+  retryIndex += 1;
 }
 
 const roomNotifId = (userId: string, roomId: string) => hashCode(`${userId}\u0000${roomId}`);
@@ -673,10 +696,15 @@ async function handleRichPushPayload(
       });
 
       const roomId: string | undefined = pushData?.room_id;
+      const currentRoom = roomId ? settings.mx.getRoom(roomId) : undefined;
       const roomName: string =
-        pushData?.room_name ?? pushData?.sender_display_name ?? 'Unknown Room';
-      const senderName: string | undefined = pushData?.sender_display_name;
+        pushData?.room_name || currentRoom?.name || pushData?.sender_display_name || 'Unknown Room';
       const senderId: string | undefined = pushData?.sender;
+      const senderName =
+        pushData?.sender_display_name ||
+        (senderId
+          ? currentRoom?.getMember(senderId)?.name || getMxIdLocalPart(senderId) || senderId
+          : undefined);
       const isSilent = !settings.notificationSoundEnabled;
 
       if (!roomId) {
@@ -748,10 +776,9 @@ async function handleRichPushPayload(
           cache.messages = cache.messages.slice(-MAX_MESSAGES);
         }
 
-        const currentRoom = settings.mx.getRoom(roomId);
-        if (currentRoom) {
-          cache.isGroupConversation = (currentRoom.getJoinedMemberCount() ?? 0) > 2;
-        }
+        cache.isGroupConversation =
+          Boolean(pushData?.room_name || currentRoom?.name) ||
+          (currentRoom?.getJoinedMemberCount() ?? 0) > 2;
 
         try {
           await postRoomNotification(userId, roomId, cache, isSilent, {
@@ -914,36 +941,17 @@ function scheduleEncryptedPreviewEnrichment(
     });
   };
 
-  const fallBackToSdkDecryption = (): void => {
-    whenDecrypted(decrypted, () =>
+  whenDecrypted(
+    decrypted,
+    () =>
       applyDecryptedPreview({
         content: decrypted.getContent(),
         eventType: decrypted.getType(),
         sender: decrypted.getSender(),
-      })
-    );
-    void initialSettings.mx.decryptEventIfNeeded(decrypted).catch(() => {
-      unifiedPushLog.warn('notification', 'Encrypted preview decryption failed');
-    });
-  };
-
-  // The engine reads the crypto store directly, so it answers without waiting on the SDK
-  // pipeline; it returns null exactly in the late-key case the SDK path retries.
-  void decryptPushEventNatively(initialSettings.mx.getUserId(), initialSettings.mx.getDeviceId(), {
-    roomId,
-    eventId,
-    sender: pushData.sender,
-    content: encryptedContent,
-  })
-    .then((plaintext) => {
-      if (plaintext) {
-        void applyDecryptedPreview(plaintext);
-        return;
-      }
-      fallBackToSdkDecryption();
-    })
-    // Without this the preview would stay at its "Encrypted message" baseline forever.
-    .catch(fallBackToSdkDecryption);
+      }),
+    initialSettings.mx
+  );
+  void initialSettings.mx.decryptEventIfNeeded(decrypted).catch(() => undefined);
 }
 
 async function handleMinimalPushPayload(
@@ -966,11 +974,16 @@ async function handleMinimalPushPayload(
   }
 
   const room = settings.mx.getRoom(roomId);
-  const roomName = room?.name ?? pushData?.sender_display_name ?? 'Unknown Room';
+  const roomName =
+    room?.name || pushData?.room_name || pushData?.sender_display_name || 'Unknown Room';
   const isEncryptedRoom = room ? !!getStateEvent(room, EventType.RoomEncryption) : false;
 
-  let senderName: string | undefined;
-  let senderId: string | undefined;
+  let senderId = pushData?.sender;
+  let senderName =
+    pushData?.sender_display_name ||
+    (senderId
+      ? room?.getMember(senderId)?.name || getMxIdLocalPart(senderId) || senderId
+      : undefined);
   let previewText: string | undefined;
   let inMemoryStillEncrypted = false;
   if (room && eventId) {
@@ -1023,9 +1036,8 @@ async function handleMinimalPushPayload(
       cache.messages = cache.messages.slice(-MAX_MESSAGES);
     }
 
-    if (room) {
-      cache.isGroupConversation = (room.getJoinedMemberCount() ?? 0) > 2;
-    }
+    cache.isGroupConversation =
+      Boolean(pushData?.room_name || room?.name) || (room?.getJoinedMemberCount() ?? 0) > 2;
 
     try {
       await postRoomNotification(userId, roomId, cache, !settings.notificationSoundEnabled, {
@@ -1130,7 +1142,7 @@ async function handleMinimalPushPayload(
             }
           });
 
-        whenDecrypted(fetched, applyFetchedPreview);
+        whenDecrypted(fetched, applyFetchedPreview, settings.mx);
       })
       .catch((error) => {
         unifiedPushLog.warn(
@@ -1196,6 +1208,23 @@ export async function setEncryptedContentAllowed(allowed: boolean): Promise<void
 }
 
 const TAKE_PUSH_DIAGNOSTICS = 'plugin:notifications|take_push_diagnostics';
+const IS_IGNORING_BATTERY_OPTIMIZATIONS = 'plugin:notifications|is_ignoring_battery_optimizations';
+const REQUEST_IGNORE_BATTERY_OPTIMIZATIONS =
+  'plugin:notifications|request_ignore_battery_optimizations';
+
+export async function isIgnoringBatteryOptimizations(): Promise<boolean | null> {
+  if (!isTauri()) return null;
+  try {
+    return await invoke<boolean>(IS_IGNORING_BATTERY_OPTIMIZATIONS);
+  } catch {
+    return null;
+  }
+}
+
+export async function requestIgnoreBatteryOptimizations(): Promise<void> {
+  if (!isTauri()) return;
+  await invoke(REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+}
 
 export type PushDiagnostics = {
   counts: Record<string, number>;

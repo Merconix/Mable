@@ -41,8 +41,8 @@ const {
     viewportSize: 600,
     scrollToIndex: vi.fn<() => void>(),
     scrollTo: vi.fn<() => void>(),
-    getItemOffset: () => 0,
-    getItemSize: () => 100,
+    getItemOffset: (): number => 0,
+    getItemSize: (): number => 100,
     findItemIndex: () => 0,
   },
   timelineSync: {
@@ -380,6 +380,24 @@ const getScrollEl = (container: HTMLElement) => {
   return scrollEl as Element;
 };
 
+const SCROLL_EXTENT = { scrollHeight: 1000, clientHeight: 600 };
+const BOTTOM_OFFSET = SCROLL_EXTENT.scrollHeight - SCROLL_EXTENT.clientHeight;
+
+const instrumentScrollEl = (container: HTMLElement) => {
+  const scrollEl = getScrollEl(container);
+  const scrollTo = vi.fn<(options: ScrollToOptions) => void>();
+  Object.defineProperty(scrollEl, 'scrollHeight', {
+    configurable: true,
+    get: () => SCROLL_EXTENT.scrollHeight,
+  });
+  Object.defineProperty(scrollEl, 'clientHeight', {
+    configurable: true,
+    get: () => SCROLL_EXTENT.clientHeight,
+  });
+  Object.assign(scrollEl, { scrollTo });
+  return scrollTo;
+};
+
 const renderTimeline = () => render(<RoomTimeline room={room} editor={{} as Editor} />);
 const settleInitialScroll = () =>
   act(async () => {
@@ -435,6 +453,8 @@ describe('RoomTimeline content ResizeObserver', () => {
     vListHandle.viewportSize = 600;
     vListHandle.scrollToIndex.mockReset();
     vListHandle.scrollTo.mockReset();
+    vListHandle.getItemOffset = () => 0;
+    vListHandle.getItemSize = () => 100;
     timelineSync.focusItem = undefined;
     (timelineSync.setFocusItem as ReturnType<typeof vi.fn>).mockReset();
     globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
@@ -446,55 +466,68 @@ describe('RoomTimeline content ResizeObserver', () => {
 
   it('re-pins to the bottom when the VList content grows while pinned and live', async () => {
     const { container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
 
     // Let the mount-time initial scroll and its 80ms timer settle, then
     // isolate the content-resize behavior.
     await settleInitialScroll();
-    vListHandle.scrollToIndex.mockClear();
+    scrollTo.mockClear();
 
     const contentEl = getContentEl(container);
     act(() => fireResize(contentEl));
 
-    expect(vListHandle.scrollToIndex).toHaveBeenCalledWith(
-      0,
-      expect.objectContaining({ align: 'end' })
-    );
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
+  });
+
+  it('pins to the scroll extent instead of virtua item measurements', async () => {
+    const { container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
+    vListHandle.getItemOffset = () => 0;
+    vListHandle.getItemSize = () => 0;
+
+    await settleInitialScroll();
+    scrollTo.mockClear();
+
+    act(() => fireResize(getContentEl(container)));
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
+    expect(vListHandle.scrollToIndex).not.toHaveBeenCalled();
   });
 
   it('re-pins to the bottom when the timeline viewport shrinks while pinned and live', async () => {
     const { container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
 
     await settleInitialScroll();
-    vListHandle.scrollToIndex.mockClear();
+    scrollTo.mockClear();
 
     const timeline = container.querySelector('[data-testid="timeline"]');
     expect(timeline).toBeTruthy();
     act(() => fireResize(timeline!));
 
-    expect(vListHandle.scrollToIndex).toHaveBeenCalledWith(
-      0,
-      expect.objectContaining({ align: 'end' })
-    );
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
   });
 
   it('does not re-pin on content growth after scrolling off the bottom', async () => {
     const { container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
 
     await settleInitialScroll();
 
     // Scroll far off the bottom: scrollSize - offset - viewportSize >= 100.
     act(() => lastOnScroll?.(0));
-    vListHandle.scrollToIndex.mockClear();
+    scrollTo.mockClear();
 
     const contentEl = getContentEl(container);
     act(() => fireResize(contentEl));
 
-    expect(vListHandle.scrollToIndex).not.toHaveBeenCalled();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it('cancels the delayed initial bottom scroll when the user scrolls up', async () => {
     const { container } = renderTimeline();
-    vListHandle.scrollToIndex.mockClear();
+    const scrollTo = instrumentScrollEl(container);
+    scrollTo.mockClear();
 
     act(() => {
       getScrollEl(container).dispatchEvent(new Event('wheel', { bubbles: true }));
@@ -502,22 +535,24 @@ describe('RoomTimeline content ResizeObserver', () => {
     });
     await settleInitialScroll();
 
-    expect(vListHandle.scrollToIndex).not.toHaveBeenCalled();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it('does not cancel the delayed initial bottom scroll for a Virtua scroll callback', async () => {
-    renderTimeline();
-    vListHandle.scrollToIndex.mockClear();
+    const { container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
+    scrollTo.mockClear();
 
     act(() => lastOnScroll?.(0));
     await settleInitialScroll();
 
-    expect(vListHandle.scrollToIndex).toHaveBeenCalled();
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
   });
 
   it('does not treat a pointer press as an initial timeline scroll', async () => {
     const { container } = renderTimeline();
-    vListHandle.scrollToIndex.mockClear();
+    const scrollTo = instrumentScrollEl(container);
+    scrollTo.mockClear();
 
     act(() => {
       getScrollEl(container).dispatchEvent(new Event('pointerdown', { bubbles: true }));
@@ -525,7 +560,7 @@ describe('RoomTimeline content ResizeObserver', () => {
     });
     await settleInitialScroll();
 
-    expect(vListHandle.scrollToIndex).toHaveBeenCalled();
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
   });
 
   it('resolves a jump target by event id, not by raw timeline index', async () => {
@@ -546,20 +581,18 @@ describe('RoomTimeline content ResizeObserver', () => {
   });
 
   it('treats a jump to the final live row as latest', async () => {
-    const { rerender, queryByText } = render(
+    const { rerender, queryByText, container } = render(
       <RoomTimeline room={room} editor={{} as Editor} eventId="$evt1" />
     );
+    const scrollTo = instrumentScrollEl(container);
 
     await settleInitialScroll();
-    vListHandle.scrollToIndex.mockClear();
+    scrollTo.mockClear();
 
     timelineSync.focusItem = { eventId: '$evt1', scrollTo: true, highlight: true };
     rerender(<RoomTimeline room={room} editor={{} as Editor} eventId="$evt1" />);
 
-    expect(vListHandle.scrollToIndex).toHaveBeenCalledWith(
-      0,
-      expect.objectContaining({ align: 'end' })
-    );
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
     expect(queryByText('Jump to Latest')).toBeNull();
     expect(navigateRoomMock).toHaveBeenCalledWith(room.roomId, undefined, { replace: true });
   });
@@ -1159,36 +1192,35 @@ describe('scroll-edge pagination', () => {
 
 describe('backfill scroll anchoring', () => {
   it('re-pins to the bottom after a backfill completes if the user was at the bottom', async () => {
-    const { rerender } = renderTimeline();
+    const { rerender, container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
 
     // Let the mount-time initial scroll settle, then watch backfill only.
     await settleInitialScroll();
-    vListHandle.scrollToIndex.mockClear();
+    scrollTo.mockClear();
 
     timelineSync.backwardStatus = 'loading';
     rerender(<RoomTimeline room={room} editor={{} as Editor} />);
     timelineSync.backwardStatus = 'idle';
     rerender(<RoomTimeline room={room} editor={{} as Editor} />);
 
-    expect(vListHandle.scrollToIndex).toHaveBeenCalledWith(
-      0,
-      expect.objectContaining({ align: 'end' })
-    );
+    expect(scrollTo).toHaveBeenCalledWith({ top: BOTTOM_OFFSET, behavior: 'instant' });
   });
 
   it('does not scroll away after a backfill if the user had scrolled up', async () => {
-    const { rerender } = renderTimeline();
+    const { rerender, container } = renderTimeline();
+    const scrollTo = instrumentScrollEl(container);
 
     await settleInitialScroll();
 
     act(() => lastOnScroll?.(0));
-    vListHandle.scrollToIndex.mockClear();
+    scrollTo.mockClear();
 
     timelineSync.backwardStatus = 'loading';
     rerender(<RoomTimeline room={room} editor={{} as Editor} />);
     timelineSync.backwardStatus = 'idle';
     rerender(<RoomTimeline room={room} editor={{} as Editor} />);
 
-    expect(vListHandle.scrollToIndex).not.toHaveBeenCalled();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });

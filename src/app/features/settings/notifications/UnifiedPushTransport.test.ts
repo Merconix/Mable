@@ -1,4 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+type LogFn = (category: string, message: string, data?: unknown) => void;
+
+const { logError } = vi.hoisted(() => ({
+  logError: vi.fn<LogFn>(),
+}));
+
+vi.mock('$utils/debugLogger', () => ({
+  createDebugLogger: () => ({
+    debug: vi.fn<LogFn>(),
+    info: vi.fn<LogFn>(),
+    warn: vi.fn<LogFn>(),
+    error: logError,
+  }),
+}));
+
 import {
   classifyUnifiedPushFailure,
   ensureUnifiedPushDistributorSelection,
@@ -162,6 +178,23 @@ describe('registerUnifiedPushTransport', () => {
       error: 'UnifiedPush registration returned an invalid endpoint',
       distributor: 'org.example.up',
     });
+  });
+
+  it('reports a registration failure so it reaches telemetry', async () => {
+    unifiedPushApi.isPermissionGranted.mockResolvedValue(true);
+    localStorage.removeItem('unifiedpush_distributor');
+    unifiedPushApi.listDistributors.mockResolvedValue([]);
+    unifiedPushApi.registerForPushNotifications.mockRejectedValue(new Error('gateway refused'));
+
+    await expect(registerUnifiedPushTransport(undefined, 'https://ntfy.sh')).resolves.toMatchObject(
+      { status: 'hard-failure' }
+    );
+
+    expect(logError).toHaveBeenCalledWith(
+      'notification',
+      expect.stringContaining('UnifiedPush registration failed'),
+      expect.objectContaining({ hasEmbeddedGateway: true })
+    );
   });
 
   it('treats a blank-only endpoint as a hard failure', async () => {

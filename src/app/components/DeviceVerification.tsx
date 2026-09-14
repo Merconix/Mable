@@ -1,7 +1,7 @@
 import type { ShowSasCallbacks, VerificationRequest, Verifier } from '$types/matrix-sdk';
 import { VerificationPhase, VerificationMethod } from '$types/matrix-sdk';
 import type { CSSProperties } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, config, Dialog, Header, IconButton, Spinner, Text } from 'folds';
 import { composerIcon, X } from '$components/icons/phosphor';
 import * as Sentry from '@sentry/react';
@@ -17,7 +17,6 @@ import { AsyncStatus, useAsyncCallback } from '$hooks/useAsyncCallback';
 import { ContainerColor } from '$styles/ContainerColor.css';
 import { ModalOverlay } from '$components/modal-overlay/ModalOverlay';
 import { useMatrixClient } from '$hooks/useMatrixClient';
-import type { CryptoBackend } from '$types/matrix-sdk';
 import { Button } from '$components/button';
 
 const DialogHeaderStyles: CSSProperties = {
@@ -94,8 +93,6 @@ function VerificationWaitStart() {
     </Box>
   );
 }
-
-const PENDING_REQUEST_POLL_MS = 2000;
 
 type VerificationStartProps = {
   onStart: () => Promise<void>;
@@ -185,16 +182,26 @@ function CompareEmoji({ sasData }: { sasData: ShowSasCallbacks }) {
 type SasVerificationProps = {
   verifier: Verifier;
   onCancel: () => void;
+  onVerified: () => void;
 };
-function SasVerification({ verifier, onCancel }: SasVerificationProps) {
+function SasVerification({ verifier, onCancel, onVerified }: SasVerificationProps) {
   const [sasData, setSasData] = useState<ShowSasCallbacks>();
 
   useVerifierShowSas(verifier, setSasData);
   useVerifierCancel(verifier, onCancel);
 
   useEffect(() => {
-    verifier.verify().catch(() => undefined);
-  }, [verifier]);
+    let active = true;
+    verifier
+      .verify()
+      .then(() => {
+        if (active) onVerified();
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [verifier, onVerified]);
 
   if (sasData) {
     return <CompareEmoji sasData={sasData} />;
@@ -243,9 +250,20 @@ type DeviceVerificationProps = {
 };
 export function DeviceVerification({ request, onExit }: DeviceVerificationProps) {
   const phase = useVerificationRequestPhase(request);
+  const [verified, setVerified] = useState(false);
+  const verifiedRef = useRef(false);
+
+  const handleVerified = useCallback(() => {
+    verifiedRef.current = true;
+    setVerified(true);
+  }, []);
 
   const handleCancel = useCallback(() => {
-    if (request.phase !== VerificationPhase.Done && request.phase !== VerificationPhase.Cancelled) {
+    if (
+      !verifiedRef.current &&
+      request.phase !== VerificationPhase.Done &&
+      request.phase !== VerificationPhase.Cancelled
+    ) {
       request.cancel().catch(() => undefined);
     }
     onExit();
@@ -257,19 +275,24 @@ export function DeviceVerification({ request, onExit }: DeviceVerificationProps)
   }, [request]);
 
   const refreshVerificationStatus = useRefreshDeviceVerificationStatus();
+  const done = verified || phase === VerificationPhase.Done;
+  const reportedRef = useRef(false);
 
   useEffect(() => {
-    if (phase === VerificationPhase.Done) {
+    if (reportedRef.current) return;
+    if (done) {
+      reportedRef.current = true;
       refreshVerificationStatus();
       Sentry.metrics.count('sable.crypto.verification_outcome', 1, {
         attributes: { outcome: 'completed' },
       });
     } else if (phase === VerificationPhase.Cancelled) {
+      reportedRef.current = true;
       Sentry.metrics.count('sable.crypto.verification_outcome', 1, {
         attributes: { outcome: 'cancelled' },
       });
     }
-  }, [phase, refreshVerificationStatus]);
+  }, [done, phase, refreshVerificationStatus]);
 
   return (
     <ModalOverlay
@@ -301,16 +324,23 @@ export function DeviceVerification({ request, onExit }: DeviceVerificationProps)
               <VerificationWaitStart />
             ))}
           {phase === VerificationPhase.Started &&
+            !done &&
             (request.verifier ? (
-              <SasVerification verifier={request.verifier} onCancel={handleCancel} />
+              <SasVerification
+                verifier={request.verifier}
+                onCancel={handleCancel}
+                onVerified={handleVerified}
+              />
             ) : (
               <VerificationUnexpected
                 message="Unexpected Error! Verification is started but verifier is missing."
                 onClose={handleCancel}
               />
             ))}
-          {phase === VerificationPhase.Done && <VerificationDone onExit={onExit} />}
-          {phase === VerificationPhase.Cancelled && <VerificationCanceled onClose={handleCancel} />}
+          {done && <VerificationDone onExit={onExit} />}
+          {!done && phase === VerificationPhase.Cancelled && (
+            <VerificationCanceled onClose={handleCancel} />
+          )}
         </Box>
       </Dialog>
     </ModalOverlay>
@@ -329,20 +359,29 @@ export function ReceiveSelfDeviceVerification() {
   );
 
   useEffect(() => {
-    if (request) return undefined;
-    const crypto = mx.getCrypto() as CryptoBackend | undefined;
+    if (!mx.clientRunning) return undefined;
+    const crypto = mx.getCrypto();
     if (!crypto?.getVerificationRequestsToDeviceInProgress) return undefined;
 
-    const adopt = () => {
+    // The OlmMachine can be freed between the clientRunning check and this call.
+    try {
       const pending = crypto
         .getVerificationRequestsToDeviceInProgress(mx.getSafeUserId())
-        .find((candidate) => candidate.isSelfVerification && !candidate.initiatedByMe);
+        .find(
+          (candidate) =>
+            candidate.isSelfVerification && !candidate.initiatedByMe && candidate.pending
+        );
       if (pending) setRequest(pending);
-    };
-    adopt();
-    const timer = setInterval(adopt, PENDING_REQUEST_POLL_MS);
-    return () => clearInterval(timer);
-  }, [mx, request]);
+    } catch (error) {
+      Sentry.addBreadcrumb({
+        category: 'crypto',
+        message: 'Could not read in-progress verification requests',
+        level: 'warning',
+        data: { error: error instanceof Error ? error.message : String(error) },
+      });
+    }
+    return undefined;
+  }, [mx]);
 
   const handleExit = useCallback(() => {
     setRequest(undefined);

@@ -347,6 +347,36 @@ describe('sanitizeSentryPayload', () => {
 });
 
 describe('sanitizeDiagnosticsLogs', () => {
+  it('keeps safe failure fields while scrubbing sensitive and arbitrary data', () => {
+    const sanitized = sanitizeDiagnosticsLogs(
+      JSON.stringify({
+        logs: [
+          {
+            data: {
+              phase: 'rust_crypto',
+              error: 'GET https://matrix.example/sync?access_token=secret for @alice:example.org',
+              reason: 'room !private:example.org failed',
+              private: 'remove me',
+              token: 'remove me too',
+            },
+          },
+        ],
+      })
+    );
+
+    expect(sanitized).not.toBeNull();
+    const parsed = JSON.parse(sanitized as string) as {
+      logs: { data: Record<string, unknown> }[];
+    };
+    expect(parsed.logs[0]?.data).toEqual({
+      phase: 'rust_crypto',
+      error: 'GET [REDACTED_URL] for [REDACTED_MATRIX_ID]',
+      reason: 'room [REDACTED_MATRIX_ID] failed',
+    });
+    expect(JSON.stringify(parsed)).not.toContain('secret');
+    expect(JSON.stringify(parsed)).not.toContain('private');
+  });
+
   it('keeps safe metadata and removes sensitive or arbitrary values', () => {
     const sanitized = sanitizeDiagnosticsLogs(
       JSON.stringify({

@@ -37,6 +37,7 @@ import {
   enablePushNotifications,
   disablePushNotifications,
 } from './PushNotifications';
+import { BatteryOptimizationSetting } from './BatteryOptimization';
 import { DeregisterAllPushersSetting } from './DeregisterPushNotifications';
 import {
   disableNativePush,
@@ -912,6 +913,9 @@ function BackgroundPushNotificationSetting() {
               </Text>
             )}
           </SettingTile>
+          <BatteryOptimizationSetting
+            active={upEndpoint?.distributor === EMBEDDED_WEBSOCKET_DISTRIBUTOR}
+          />
           <NotificationTransportOverrideInput
             focusId="unified-push-gateway-url"
             title="UnifiedPush Gateway URL"

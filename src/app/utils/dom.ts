@@ -135,7 +135,7 @@ export const getThumbnail = (
 
 export const scrollToBottom = (scrollEl: HTMLElement, behavior?: 'auto' | 'instant' | 'smooth') => {
   scrollEl.scrollTo({
-    top: Math.round(scrollEl.scrollHeight - scrollEl.offsetHeight),
+    top: Math.round(scrollEl.scrollHeight - scrollEl.clientHeight),
     behavior,
   });
 };

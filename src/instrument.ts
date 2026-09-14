@@ -45,6 +45,14 @@ if (dsn && sentryEnabled) {
     // The default 100 only covered a few seconds of this app's HTTP traffic.
     maxBreadcrumbs: 200,
 
+    // Missing web push support and declined permission prompts are not defects.
+    ignoreErrors: [
+      'Push messaging is not supported in this browser.',
+      'Registration failed - permission denied',
+      'User denied push permission',
+      'Push notification prompting can only be done from a user gesture',
+    ],
+
     integrations: [
       // React Router v6 browser tracing integration
       Sentry.reactRouterV6BrowserTracingIntegration({

@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClientEvent, MatrixClient } from '$types/matrix-sdk';
-import { SyncState } from '$types/matrix-sdk';
+import { createClient, IndexedDBStore, SyncState } from '$types/matrix-sdk';
 import type { Session } from '$state/sessions';
 import type * as PlatformModule from '$utils/platform';
 import { ACTIVE_SESSION_KEY, MATRIX_SESSIONS_KEY } from '$state/sessions';
@@ -24,7 +25,114 @@ import {
   releaseCryptoStore,
   resolvePollTimeoutMs,
   supportsSlidingSync,
+  startupSyncStore,
 } from './initMatrix';
+
+const failSyncRead = (message: string, persistent = false, name = 'UnknownError') => {
+  const original = IDBObjectStore.prototype.openCursor;
+  let failures = 0;
+  vi.spyOn(IDBObjectStore.prototype, 'openCursor').mockImplementation(function (
+    this: IDBObjectStore,
+    ...args
+  ) {
+    if (this.name !== 'sync' || (!persistent && failures > 0)) {
+      return original.apply(this, args);
+    }
+    failures += 1;
+    const request: IDBRequest<IDBCursorWithValue | null> = new IDBRequest();
+    Object.defineProperty(request, 'error', { value: new DOMException(message, name) });
+    queueMicrotask(() => request.onerror?.(new Event('error')));
+    return request;
+  });
+  return () => failures;
+};
+
+describe('startupSyncStore', () => {
+  let mx: MatrixClient;
+  let dbName: string;
+
+  beforeEach(async () => {
+    dbName = `sync-test-${crypto.randomUUID()}`;
+    mx = createClient({
+      baseUrl: 'https://example.org',
+      userId: '@alice:example.org',
+      accessToken: 'session-token',
+      store: new IndexedDBStore({ indexedDB, localStorage, dbName }),
+    });
+    await mx.store.startup();
+    await mx.store.setSyncData({
+      next_batch: 'cached-token',
+      rooms: { join: {}, invite: {}, leave: {}, knock: {} },
+      account_data: { events: [] },
+    });
+    await mx.store.save(true);
+    await mx.store.saveToDeviceBatches([
+      { eventType: 'm.test', txnId: 'pending-message', batch: [] },
+    ]);
+    await mx.store.destroy();
+    mx.store = new IndexedDBStore({ indexedDB, localStorage, dbName });
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await mx.store.destroy();
+    await mx.store.deleteAllData();
+  });
+
+  it.each([
+    ['Failed to read large IndexedDB value', 'UnknownError'],
+    ["Attempt to iterate a cursor that doesn't exist", 'UnknownError'],
+    [
+      'Data lost due to missing file. Affected record should be considered irrecoverable',
+      'NotReadableError',
+    ],
+  ])('recovers from %s without losing the session or pending messages', async (message, name) => {
+    failSyncRead(message, false, name);
+    const deleteDatabase = vi.spyOn(indexedDB, 'deleteDatabase');
+
+    await expect(startupSyncStore(mx, dbName)).resolves.toBeUndefined();
+
+    expect(await mx.store.getSavedSync()).toBeNull();
+    expect(await mx.store.getOldestToDeviceBatch()).toMatchObject({ txnId: 'pending-message' });
+    expect(mx.getAccessToken()).toBe('session-token');
+    expect(deleteDatabase).not.toHaveBeenCalled();
+  });
+
+  it('keeps a readable sync snapshot', async () => {
+    await startupSyncStore(mx, dbName);
+    expect(await mx.store.getSavedSyncToken()).toBe('cached-token');
+  });
+
+  it('stops after one recovery attempt if the sync cache remains unreadable', async () => {
+    const failures = failSyncRead('Failed to read large IndexedDB value', true);
+    await expect(startupSyncStore(mx, dbName)).rejects.toThrow('selectQuery failed for sync');
+    expect(failures()).toBe(2);
+  });
+
+  it('does not clear data for unrelated startup failures', async () => {
+    const error = new DOMException('Storage access denied', 'SecurityError');
+    vi.spyOn(mx.store, 'startup').mockRejectedValueOnce(error);
+    const clear = vi.spyOn(IDBObjectStore.prototype, 'clear');
+
+    await expect(startupSyncStore(mx, dbName)).rejects.toBe(error);
+    expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a failed cache repair without retrying or deleting databases', async () => {
+    const failures = failSyncRead('Failed to read large IndexedDB value');
+    const original = IDBObjectStore.prototype.clear;
+    vi.spyOn(IDBObjectStore.prototype, 'clear').mockImplementation(function (this: IDBObjectStore) {
+      const request = original.call(this);
+      this.transaction.abort();
+      return request;
+    });
+    const deleteDatabase = vi.spyOn(indexedDB, 'deleteDatabase');
+
+    await expect(startupSyncStore(mx, dbName)).rejects.toThrow('Failed to clear sync snapshot');
+    expect(failures()).toBe(1);
+    expect(deleteDatabase).not.toHaveBeenCalled();
+  });
+});
 
 describe('installSlidingSyncRequestPatch', () => {
   it('invalidates device lists once per pos-less run, not once per request', async () => {
@@ -320,10 +428,11 @@ describe('resolvePollTimeoutMs', () => {
   });
 });
 
-const makeKeyBackupMx = (syncState: SyncState | null) => {
+const makeKeyBackupMx = (syncState: SyncState | null, clientRunning = true) => {
   const checkKeyBackupAndEnable = vi.fn<() => Promise<null>>().mockResolvedValue(null);
   const listeners = new Set<(state: SyncState) => void>();
   const mx = {
+    clientRunning,
     getSyncState: () => syncState,
     getCrypto: () => ({ checkKeyBackupAndEnable }),
     on: (_event: ClientEvent, cb: (state: SyncState) => void) => listeners.add(cb),
@@ -355,6 +464,16 @@ describe('recheckKeyBackupAfterInitialSync', () => {
     recheckKeyBackupAfterInitialSync(mx);
 
     expect(checkKeyBackupAndEnable).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the re-check once the client has stopped', () => {
+    const { mx, checkKeyBackupAndEnable, emitSync, listeners } = makeKeyBackupMx(null, false);
+
+    recheckKeyBackupAfterInitialSync(mx);
+    emitSync(SyncState.Prepared);
+
+    expect(checkKeyBackupAndEnable).not.toHaveBeenCalled();
+    expect(listeners.size).toBe(0);
   });
 
   it('re-checks only once and stops listening', () => {

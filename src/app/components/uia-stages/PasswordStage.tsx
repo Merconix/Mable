@@ -59,7 +59,7 @@ export function PasswordStage({
       >
         <Box direction="Column" gap="400">
           <Text size="T200">
-            To perform this action you need to authenticate yourself by entering you account
+            To perform this action you need to authenticate yourself by entering your account
             password.
           </Text>
           <Box direction="Column" gap="100">

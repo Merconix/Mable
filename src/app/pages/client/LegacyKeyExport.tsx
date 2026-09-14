@@ -1,7 +1,6 @@
 import type { FormEventHandler } from 'react';
 import { useCallback } from 'react';
 import { Box, color, Text } from 'folds';
-import type { MatrixClient } from '$types/matrix-sdk';
 import { Button } from '$components/button';
 import { PasswordInput } from '$components/password-input';
 import { ConfirmPasswordMatch } from '$components/ConfirmPasswordMatch';
@@ -16,26 +15,23 @@ const errorMessage = (error: ExportError): string =>
   'friendlyText' in error ? error.friendlyText : error.message;
 
 type LegacyKeyExportProps = {
-  client: MatrixClient;
+  exporter: () => Promise<string>;
 };
 
-export function LegacyKeyExport({ client }: LegacyKeyExportProps) {
+export function LegacyKeyExport({ exporter }: LegacyKeyExportProps) {
   const alive = useAlive();
 
   const [exportState, exportKeys] = useAsyncCallback<void, ExportError, [string]>(
     useCallback(
       async (password) => {
-        const crypto = client.getCrypto();
-        if (!crypto) throw new Error('The legacy encryption store could not be opened.');
-
-        const keysJSON = await crypto.exportRoomKeysAsJson();
+        const keysJSON = await exporter();
         const blob = new Blob([await encryptMegolmKeyFile(keysJSON, password)], {
           type: 'text/plain;charset=us-ascii',
         });
         const outcome = await saveFileToDevice(blob, 'sable-keys.txt');
         if (outcome === 'failed') throw new Error('The key file could not be saved.');
       },
-      [client]
+      [exporter]
     )
   );
 

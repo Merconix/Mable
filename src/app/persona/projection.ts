@@ -123,6 +123,8 @@ export function stripPerMessageProfilePlainBody(formatted_body: string, profile?
   return formatted_body.replace(/^.*?: /, '');
 }
 
-export function stripPerMessageProfileFormattedBody(formatted_body: string): string {
-  return formatted_body.replace(/^<strong\s+data-mx-profile-fallback[^>]*>.*?<\/strong>/, '');
+export function stripPerMessageProfileFormattedBody(
+  formatted_body: string | undefined
+): string | undefined {
+  return formatted_body?.replace(/^<strong\s+data-mx-profile-fallback[^>]*>.*?<\/strong>/, '');
 }

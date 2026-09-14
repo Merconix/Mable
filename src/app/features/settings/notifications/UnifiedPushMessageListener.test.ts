@@ -1,4 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
+
+type LogFn = (category: string, message: string, data?: unknown) => void;
+
+const { warn } = vi.hoisted(() => ({
+  warn: vi.fn<LogFn>(),
+}));
+
+vi.mock('$utils/debugLogger', () => ({
+  createDebugLogger: () => ({
+    debug: vi.fn<LogFn>(),
+    info: vi.fn<LogFn>(),
+    warn,
+    error: vi.fn<LogFn>(),
+  }),
+}));
+
 import {
   createUnifiedPushMessageListener,
   parseUnifiedPushMessage,
@@ -116,5 +132,34 @@ describe('parseUnifiedPushMessage', () => {
     ]) {
       expect(parseUnifiedPushMessage({ message: JSON.stringify(payload) })).toBeNull();
     }
+  });
+
+  it('reports a dropped push instead of discarding it silently', () => {
+    warn.mockClear();
+
+    expect(
+      parseUnifiedPushMessage({
+        message: JSON.stringify({
+          user_id: '@a:server',
+          notification: { user_id: '@b:server', room_id: '!r:server' },
+        }),
+      })
+    ).toBeNull();
+
+    expect(warn).toHaveBeenCalledWith('notification', expect.stringContaining('Dropped push'), {
+      recipientCount: 2,
+    });
+  });
+
+  it('reports an unparsable push', () => {
+    warn.mockClear();
+
+    expect(parseUnifiedPushMessage({ message: 'not json' })).toBeNull();
+
+    expect(warn).toHaveBeenCalledWith(
+      'notification',
+      expect.stringContaining('Dropped push'),
+      undefined
+    );
   });
 });

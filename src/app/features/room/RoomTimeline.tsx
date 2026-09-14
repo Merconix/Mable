@@ -29,7 +29,7 @@ import { useMessageEdit } from '$hooks/useMessageEdit';
 import { useDocumentFocusChange } from '$hooks/useDocumentFocusChange';
 import { useIsInactivePanel } from '$hooks/useRoom';
 import { markAsRead } from '$utils/notifications';
-import { isWindowFocused } from '$utils/dom';
+import { isWindowFocused, scrollToBottom as scrollElementToBottom } from '$utils/dom';
 import { today, yesterday, timeDayMonthYear } from '$utils/time';
 import {
   unwrapRelationJumpTarget,
@@ -492,18 +492,15 @@ export function RoomTimeline({
       const lastIndex = processedEventsRef.current.length - 1;
       if (!v || lastIndex < 0) return;
 
+      const smooth = behavior === 'smooth' && !reducedMotion;
+
       const scrollEl = scrollElRef.current;
-      let offset = 0;
       if (scrollEl) {
-        const target = v.getItemOffset(lastIndex) + v.getItemSize(lastIndex) - v.viewportSize;
-        offset = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight - target);
+        scrollElementToBottom(scrollEl, smooth ? 'smooth' : 'instant');
+        return;
       }
 
-      v.scrollToIndex(lastIndex, {
-        align: 'end',
-        offset,
-        smooth: behavior === 'smooth' && !reducedMotion,
-      });
+      v.scrollToIndex(lastIndex, { align: 'end', smooth });
     },
     [reducedMotion]
   );

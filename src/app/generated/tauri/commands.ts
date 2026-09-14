@@ -38,16 +38,16 @@ export async function engineClose(params: types.EngineCloseParams): Promise<bool
   return invoke('engine_close', params);
 }
 
-export async function engineDecryptPush(params: types.EngineDecryptPushParams): Promise<types.DecryptedPush> {
-  return invoke('engine_decrypt_push', params);
-}
-
 export async function engineInvoke(params: types.EngineInvokeParams): Promise<string> {
   return invoke('engine_invoke', params);
 }
 
 export async function engineOpen(params: types.EngineOpenParams): Promise<types.EngineInfo> {
   return invoke('engine_open', params);
+}
+
+export async function engineStoreExists(params: types.EngineStoreExistsParams): Promise<boolean> {
+  return invoke('engine_store_exists', params);
 }
 
 export async function engineWipe(params: types.EngineWipeParams): Promise<void> {

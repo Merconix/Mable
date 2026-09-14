@@ -70,6 +70,18 @@ modules:
           url-query: .assets[] | select(.name == "Sable-" + $version + "-linux-x86_64.tar.gz")
             | .browser_download_url
           is-main-source: true
+      - type: extra-data
+        filename: sable.tar.gz
+        url: https://github.com/SableClient/Sable/releases/download/v1.21.0/Sable-1.21.0-linux-aarch64.tar.gz
+        sha256: 2d732583c4016c00fc88356ae2148efb11e02e82b46f4b4f3293554279ed5715
+        size: 175287757
+        only-arches: [aarch64]
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/SableClient/Sable/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          url-query: .assets[] | select(.name == "Sable-" + $version + "-linux-aarch64.tar.gz")
+            | .browser_download_url
       - type: script
         dest-filename: apply_extra
         commands:

@@ -6017,7 +6017,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -6875,6 +6875,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-edge-to-edge",
  "tauri-plugin-fs",
+ "tauri-plugin-geolocation",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-http",
  "tauri-plugin-livekit-mobile",
@@ -8249,6 +8250,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-geolocation"
+version = "2.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdc86d035296ed4be0c3ca0fc595019b4ba696d929785f623f11c461e04e00a8"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "tauri-plugin-global-shortcut"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8325,7 +8340,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-notifications"
 version = "0.5.0"
-source = "git+https://github.com/SableClient/tauri-plugin-notifications.git?rev=a837cd9bb87fe85ecb2a8061e6ec7e8933823dd0#a837cd9bb87fe85ecb2a8061e6ec7e8933823dd0"
+source = "git+https://github.com/SableClient/tauri-plugin-notifications.git?rev=658491c87be246740216f97cc367e29e31e690af#658491c87be246740216f97cc367e29e31e690af"
 dependencies = [
  "log",
  "notify-rust",

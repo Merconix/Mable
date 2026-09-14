@@ -192,6 +192,7 @@ export const settingsLinkFocusIdsBySection: Record<SettingsSectionId, readonly s
     'direct-messages',
     'direct-messages-encrypted',
     'email-notification',
+    'embedded-push-battery-optimization',
     'favicon-dot-mentions-only',
     'highlight-mentions',
     'in-app-notification-sound',

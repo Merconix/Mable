@@ -149,12 +149,23 @@ export const encryptFile = async <T extends File | Blob>(
   };
 };
 
+const stripBase64Padding = (value: string): string => value.replace(/=+$/, '');
+
+export const normalizeEncInfo = (encInfo: EncryptedAttachmentInfo): EncryptedAttachmentInfo => ({
+  ...encInfo,
+  iv: stripBase64Padding(encInfo.iv),
+  key: { ...encInfo.key, k: stripBase64Padding(encInfo.key.k) },
+  hashes: Object.fromEntries(
+    Object.entries(encInfo.hashes).map(([name, hash]) => [name, stripBase64Padding(hash)])
+  ),
+});
+
 export const decryptFile = async (
   dataBuffer: ArrayBuffer,
   type: string,
   encInfo: EncryptedAttachmentInfo
 ): Promise<Blob> => {
-  const dataArray = await decryptAttachment(dataBuffer, encInfo);
+  const dataArray = await decryptAttachment(dataBuffer, normalizeEncInfo(encInfo));
   const blob = new Blob([dataArray], { type });
   return blob;
 };

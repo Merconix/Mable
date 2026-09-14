@@ -11,6 +11,7 @@ import { storePrivateKey } from '$client/secretStorageKeys';
 import { stopPropagation } from '$utils/keyboard';
 import { useMatrixClient } from '$hooks/useMatrixClient';
 import { useRefreshDeviceVerificationStatus } from '$hooks/useDeviceVerificationStatus';
+import { restoreCrossSigningFromSecretStorage } from '$utils/matrix-crypto';
 import { AsyncStatus, useAsyncCallback } from '$hooks/useAsyncCallback';
 import { AsyncError } from '$components/AsyncError';
 import { SettingTile } from './setting-tile';
@@ -130,7 +131,7 @@ export function ManualVerificationTile({
       storePrivateKey(secretStorageKeyId, recoveryKey);
 
       await crypto.processDeviceLists({ changed: [mx.getSafeUserId()] });
-      await crypto.bootstrapCrossSigning({});
+      await restoreCrossSigningFromSecretStorage(mx, crypto);
       await crypto.bootstrapSecretStorage({});
 
       await crypto.loadSessionBackupPrivateKeyFromSecretStorage();

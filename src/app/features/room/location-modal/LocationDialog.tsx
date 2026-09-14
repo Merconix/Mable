@@ -16,6 +16,12 @@ import classNames from 'classnames';
 import markerIconPng from 'leaflet/dist/images/marker-icon.png';
 import { Icon } from 'leaflet';
 import { ModalOverlay } from '$components/modal-overlay/ModalOverlay';
+import { getTileUrl, TILE_ATTRIBUTION } from '$utils/tileUrl';
+import {
+  getCurrentCoordinates,
+  GeolocationError,
+  type GeolocationFailure,
+} from '$utils/geolocation';
 
 const markerIcon = new Icon({
   iconUrl: markerIconPng,
@@ -90,10 +96,17 @@ export enum LocationErrors {
   none,
   permissions = 'You have denied Sable access to you location services',
   module = 'Your device does not have a gps module, or it may not be turned on',
+  unsupported = 'Location services are unavailable on desktop, enter or paste the coordinates instead',
   unknown = 'The sharing failed for unknown reasons',
   clipboard = 'Unable to identify the coordinates from clipboard',
   missingClipboard = 'Unable to retrieve clipboard contents',
 }
+
+const FAILURE_ERRORS: Partial<Record<GeolocationFailure, LocationErrors>> = {
+  permissions: LocationErrors.permissions,
+  unavailable: LocationErrors.module,
+  unsupported: LocationErrors.unsupported,
+};
 
 export type LocationPoint = {
   status: LocationErrors;
@@ -183,28 +196,15 @@ export function LocationDialog({ onCancel, onSubmit, room }: LocationDialogProps
       .catch(() => storeLocation({ status: LocationErrors.missingClipboard }));
   }
 
-  function getLocation() {
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0,
-    };
-    function success(pos: GeolocationPosition) {
-      const crd = pos.coords;
-
-      if (!crd.latitude || !crd.longitude) {
-        setLocationError(LocationErrors.unknown);
-        return;
-      }
-      storeLocation({ lat: crd.latitude, lon: crd.longitude, status: LocationErrors.none });
+  async function getLocation() {
+    try {
+      const { lat, lon } = await getCurrentCoordinates();
+      storeLocation({ lat, lon, status: LocationErrors.none });
+    } catch (err) {
+      setLocationError(
+        (err instanceof GeolocationError && FAILURE_ERRORS[err.reason]) || LocationErrors.unknown
+      );
     }
-
-    function error(err: GeolocationPositionError) {
-      if (err.code === 1) setLocationError(LocationErrors.permissions);
-      else if (err.code === 2) setLocationError(LocationErrors.module);
-      else setLocationError(LocationErrors.unknown);
-    }
-    navigator.geolocation.getCurrentPosition(success, error, options);
   }
   const handleLat: ChangeEventHandler<HTMLInputElement> = (evt) => {
     const val = evt.target.value;
@@ -278,7 +278,7 @@ export function LocationDialog({ onCancel, onSubmit, room }: LocationDialogProps
                   : 'Critical'
               }
               className={classNames(css.LocationInputItem, css.LocationInputCurLocation)}
-              onClick={getLocation}
+              onClick={() => void getLocation()}
               before={<MapPinAreaIcon size="18" />}
             >
               <Text className={css.LocationInputField}>Share Current Location</Text>
@@ -344,10 +344,7 @@ export function LocationDialog({ onCancel, onSubmit, room }: LocationDialogProps
                 className={css.LocationMapContainer}
                 ref={setMap}
               >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+                <TileLayer attribution={TILE_ATTRIBUTION} url={getTileUrl()} />
                 <Marker
                   position={initCoords}
                   eventHandlers={{

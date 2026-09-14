@@ -139,7 +139,7 @@ export async function enablePushNotifications(
 ): Promise<void> {
   if (isTauri()) return;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    debugLog.error(
+    debugLog.info(
       'notification',
       'Push messaging not supported - missing serviceWorker or PushManager'
     );

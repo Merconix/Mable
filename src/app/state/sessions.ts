@@ -38,12 +38,14 @@ export type SessionStoreName = {
   crypto: string;
   /** Prefix for the Rust crypto IndexedDB: the actual DB is `${rustCryptoPrefix}::matrix-sdk-crypto` */
   rustCryptoPrefix: string;
+  /** Device scoped prefix, used when the shared store holds another device's account. */
+  rustCryptoPrefixPerDevice: string;
 };
 
 /**
  * Migration code for old session
  */
-const FALLBACK_STORE_NAME: SessionStoreName = {
+const FALLBACK_STORE_NAME = {
   sync: 'web-sync-store',
   crypto: 'crypto-store',
   rustCryptoPrefix: 'matrix-js-sdk',
@@ -92,13 +94,17 @@ export const getFallbackSession = (): Session | undefined => {
 
 export const getSessionStoreName = (session: Session): SessionStoreName => {
   if (session.fallbackSdkStores) {
-    return FALLBACK_STORE_NAME;
+    return {
+      ...FALLBACK_STORE_NAME,
+      rustCryptoPrefixPerDevice: `${FALLBACK_STORE_NAME.rustCryptoPrefix}:${session.deviceId}`,
+    };
   }
 
   return {
     sync: `sync${session.userId}`,
     crypto: `crypto${session.userId}`,
     rustCryptoPrefix: `sync${session.userId}`,
+    rustCryptoPrefixPerDevice: `sync${session.userId}:${session.deviceId}`,
   };
 };
 

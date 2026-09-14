@@ -281,8 +281,9 @@ export function VerifyOtherDeviceTile({ crypto, deviceId }: VerifyOtherDeviceTil
 
 type EnableVerificationProps = {
   visible: boolean;
+  loading?: boolean;
 };
-export function EnableVerification({ visible }: EnableVerificationProps) {
+export function EnableVerification({ visible, loading }: EnableVerificationProps) {
   const [open, setOpen] = useState(false);
 
   const handleCancel = useCallback(() => setOpen(false), []);
@@ -290,7 +291,13 @@ export function EnableVerification({ visible }: EnableVerificationProps) {
   return (
     <>
       {visible && (
-        <Button size="300" radii="300" onClick={() => setOpen(true)}>
+        <Button
+          size="300"
+          radii="300"
+          onClick={() => setOpen(true)}
+          disabled={loading}
+          before={loading && <Spinner size="100" variant="Primary" fill="Solid" />}
+        >
           <Text as="span" size="B300">
             Enable
           </Text>

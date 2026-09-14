@@ -27,7 +27,38 @@ const {
   rewriteAuthenticatedMediaUrl,
   toggleReaction,
   optimisticallyRedactEvent,
+  normalizeEncInfo,
 } = await import('./matrix');
+
+describe('normalizeEncInfo', () => {
+  const padded = {
+    v: 'v2',
+    key: {
+      alg: 'A256CTR',
+      key_ops: ['encrypt', 'decrypt'],
+      kty: 'oct',
+      k: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=',
+      ext: true,
+    },
+    iv: 'G+qzsN3Y9FgAAAAAAAAAAA==',
+    hashes: { sha256: 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=' },
+  };
+
+  it('strips padding from iv, key and hashes', () => {
+    expect(normalizeEncInfo(padded)).toEqual({
+      ...padded,
+      key: { ...padded.key, k: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8' },
+      iv: 'G+qzsN3Y9FgAAAAAAAAAAA',
+      hashes: { sha256: 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8' },
+    });
+  });
+
+  it('leaves unpadded input untouched and never mutates the event content', () => {
+    const unpadded = normalizeEncInfo(padded);
+    expect(normalizeEncInfo(unpadded)).toEqual(unpadded);
+    expect(padded.iv).toBe('G+qzsN3Y9FgAAAAAAAAAAA==');
+  });
+});
 
 describe('rewriteAuthenticatedMediaUrl', () => {
   beforeEach(() => {

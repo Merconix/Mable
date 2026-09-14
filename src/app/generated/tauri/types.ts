@@ -10,13 +10,6 @@
 
 import type { Channel } from '@tauri-apps/api/core';
 
-export interface DecryptedPush {
-  event_type?: string | null;
-  sender?: string | null;
-  body?: string | null;
-  clear_event: string;
-}
-
 export interface DesktopRuntimeState {
   trayAvailable: boolean;
   toggleWindowShortcut?: string | null;
@@ -101,15 +94,6 @@ export interface EngineCloseParams {
   [key: string]: unknown;
 }
 
-export interface EngineDecryptPushParams {
-  userId: string;
-  deviceId: string;
-  roomId: string;
-  eventJson: string;
-  passphrase?: string | null;
-  [key: string]: unknown;
-}
-
 export interface EngineInvokeParams {
   userId: string;
   deviceId: string;
@@ -121,6 +105,12 @@ export interface EngineInvokeParams {
 export interface EngineOpenParams {
   dir?: string | null;
   passphrase?: string | null;
+  userId: string;
+  deviceId: string;
+  [key: string]: unknown;
+}
+
+export interface EngineStoreExistsParams {
   userId: string;
   deviceId: string;
   [key: string]: unknown;

@@ -187,6 +187,69 @@ fn encryption_settings() -> Value {
     })
 }
 
+async fn encrypt_message(peer: &Peer, body: &str) -> Value {
+    let encrypted = call(
+        peer,
+        "encryptRoomEvent",
+        json!({
+            "roomId": ROOM,
+            "eventType": "m.room.message",
+            "content": json!({ "msgtype": "m.text", "body": body }).to_string(),
+        }),
+    )
+    .await;
+
+    serde_json::from_str(encrypted.as_str().unwrap()).unwrap()
+}
+
+fn encrypted_event(content: Value, event_id: &str) -> Value {
+    json!({
+        "event_id": event_id,
+        "type": "m.room.encrypted",
+        "sender": "@alice:example.org",
+        "room_id": ROOM,
+        "origin_server_ts": 0,
+        "content": content,
+    })
+}
+
+async fn decrypt_message(peer: &Peer, event: Value) -> Value {
+    dispatch::invoke(
+        &peer.machine,
+        "decryptRoomEvent",
+        json!({
+            "event": event.to_string(),
+            "roomId": ROOM,
+            "decryptionSettings": { "senderDeviceTrustRequirement": 0 },
+        }),
+    )
+    .await
+    .unwrap()
+}
+
+async fn deliver_shared_room_keys(alice: &Peer, bob: &Peer, shared: &Value) {
+    for request in shared.as_array().unwrap() {
+        let events = to_device_events(&alice.user, request);
+        call(
+            bob,
+            "receiveSyncChanges",
+            json!({ "toDeviceEvents": events.to_string() }),
+        )
+        .await;
+        call(
+            alice,
+            "markRequestAsSent",
+            json!({
+                "requestId": request["id"],
+                "requestType": request["type"],
+                "response": "{}",
+            }),
+        )
+        .await;
+    }
+    drain_to(alice, bob).await;
+}
+
 #[tokio::test]
 async fn the_encrypt_event_sequence_produces_a_readable_message() {
     let alice = peer("@alice:example.org", "ALICEDEV", "alice").await;
@@ -328,4 +391,143 @@ async fn share_room_key_accepts_the_settings_the_webview_builds() {
     .await;
 
     assert!(result.is_ok(), "{:?}", result.unwrap_err());
+}
+
+#[tokio::test]
+async fn resharing_after_invalidation_rotates_the_key() {
+    let alice = peer("@alice:example.org", "ALICEDEV", "invalidate-alice").await;
+    let bob = peer("@bob:example.org", "BOBDEV", "invalidate-bob").await;
+
+    let (alice_keys, _) = publish_keys(&alice).await;
+    let (bob_keys, bob_otks) = publish_keys(&bob).await;
+    learn_about(&alice, &bob, "BOBDEV", &bob_keys).await;
+    learn_about(&bob, &alice, "ALICEDEV", &alice_keys).await;
+    claim_session(&alice, "@bob:example.org", "BOBDEV", &bob_otks).await;
+    drain_to(&alice, &bob).await;
+
+    let shared = call(
+        &alice,
+        "shareRoomKey",
+        json!({
+            "roomId": ROOM,
+            "users": ["@bob:example.org"],
+            "encryptionSettings": encryption_settings(),
+        }),
+    )
+    .await;
+    deliver_shared_room_keys(&alice, &bob, &shared).await;
+
+    let before = encrypt_message(&alice, "before invalidation").await;
+    let decrypted = decrypt_message(
+        &bob,
+        encrypted_event(before.clone(), "$before-invalidation:example.org"),
+    )
+    .await;
+    let clear: Value = serde_json::from_str(decrypted["event"].as_str().unwrap()).unwrap();
+    assert_eq!(clear["content"]["body"], "before invalidation");
+    assert_eq!(
+        call(&alice, "invalidateGroupSession", json!({ "roomId": ROOM }),).await,
+        Value::Bool(true)
+    );
+
+    let reshared = call(
+        &alice,
+        "shareRoomKey",
+        json!({
+            "roomId": ROOM,
+            "users": [],
+            "encryptionSettings": encryption_settings(),
+        }),
+    )
+    .await;
+    assert!(reshared.as_array().unwrap().is_empty());
+
+    let after = encrypt_message(&alice, "after invalidation").await;
+    let result = decrypt_message(
+        &bob,
+        encrypted_event(after.clone(), "$after-invalidation:example.org"),
+    )
+    .await;
+    assert_ne!(
+        before["session_id"], after["session_id"],
+        "Bob result after invalidation: {result:?}"
+    );
+    assert_eq!(result["className"], "DecryptionError");
+    assert_eq!(
+        result["code"], 0,
+        "unexpected decryption failure: {result:?}"
+    );
+}
+
+#[tokio::test]
+async fn removing_a_recipient_rotates_before_the_next_event() {
+    let alice = peer("@alice:example.org", "ALICEDEV", "remove-alice").await;
+    let bob = peer("@bob:example.org", "BOBDEV", "remove-bob").await;
+
+    let (alice_keys, _) = publish_keys(&alice).await;
+    let (bob_keys, bob_otks) = publish_keys(&bob).await;
+    learn_about(&alice, &bob, "BOBDEV", &bob_keys).await;
+    learn_about(&bob, &alice, "ALICEDEV", &alice_keys).await;
+    claim_session(&alice, "@bob:example.org", "BOBDEV", &bob_otks).await;
+    drain_to(&alice, &bob).await;
+
+    let shared = call(
+        &alice,
+        "shareRoomKey",
+        json!({
+            "roomId": ROOM,
+            "users": ["@bob:example.org"],
+            "encryptionSettings": encryption_settings(),
+        }),
+    )
+    .await;
+    deliver_shared_room_keys(&alice, &bob, &shared).await;
+    let before = encrypt_message(&alice, "before removal").await;
+    let decrypted = decrypt_message(
+        &bob,
+        encrypted_event(before.clone(), "$before-removal:example.org"),
+    )
+    .await;
+    let clear: Value = serde_json::from_str(decrypted["event"].as_str().unwrap()).unwrap();
+    assert_eq!(clear["content"]["body"], "before removal");
+
+    let unchanged = call(
+        &alice,
+        "shareRoomKey",
+        json!({
+            "roomId": ROOM,
+            "users": ["@bob:example.org"],
+            "encryptionSettings": encryption_settings(),
+        }),
+    )
+    .await;
+    assert!(unchanged.as_array().unwrap().is_empty());
+
+    let removed = call(
+        &alice,
+        "shareRoomKey",
+        json!({
+            "roomId": ROOM,
+            "users": [],
+            "encryptionSettings": encryption_settings(),
+        }),
+    )
+    .await;
+    assert!(removed.as_array().unwrap().is_empty());
+
+    let after = encrypt_message(&alice, "after removal").await;
+    let result = decrypt_message(
+        &bob,
+        encrypted_event(after.clone(), "$after-removal:example.org"),
+    )
+    .await;
+    assert_ne!(
+        before["session_id"], after["session_id"],
+        "Bob result after removal: {result:?}"
+    );
+    assert_eq!(result["className"], "DecryptionError");
+    assert_eq!(
+        result["code"], 0,
+        "unexpected decryption failure: {result:?}"
+    );
 }

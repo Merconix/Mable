@@ -147,6 +147,46 @@ describe('debug logger diagnostic capture', () => {
     expect(logger.getLogs()[0]?.data).toBeUndefined();
   });
 
+  it('keeps Error-valued initialization diagnostics in Sentry context', () => {
+    logger.log('error', 'sync', 'initMatrix', 'Failed to initialize client', {
+      phase: 'rust_crypto',
+      error: new Error('crypto initialization failed'),
+    });
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      '[sync:initMatrix] Failed to initialize client',
+      expect.objectContaining({
+        contexts: {
+          debugLog: {
+            data: {
+              phase: 'rust_crypto',
+              error: 'crypto initialization failed',
+            },
+            timestamp: expect.any(String),
+          },
+        },
+      })
+    );
+  });
+
+  it('keeps native failure reasons in Sentry context', () => {
+    logger.log('error', 'notification', 'nativePush', 'Failed to register push endpoint', {
+      reason: 'permission denied',
+    });
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      '[notification:nativePush] Failed to register push endpoint',
+      expect.objectContaining({
+        contexts: {
+          debugLog: {
+            data: { reason: 'permission denied' },
+            timestamp: expect.any(String),
+          },
+        },
+      })
+    );
+  });
+
   it.each([
     [
       'circular values',

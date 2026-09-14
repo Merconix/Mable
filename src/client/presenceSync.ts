@@ -120,6 +120,9 @@ export class PresenceSyncManager {
           { abortSignal: signal }
         );
 
+        // Emitting after teardown drives SDK listeners into a crypto store that is closing.
+        if (signal.aborted || this.disposed || !this.mx.clientRunning) return;
+
         this.processPresence(response);
         this.syncToken = response.next_batch;
 

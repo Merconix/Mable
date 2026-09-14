@@ -22,24 +22,46 @@ const decode = (ctx: AudioContext, url: string): Promise<AudioBuffer> => {
   return buffer;
 };
 
-export const playNotificationSound = async (url: string): Promise<void> => {
-  context ??= new AudioContext();
-  const buffer = await decode(context, url);
-  // A context constructed outside a user gesture starts suspended, and Safari
-  // moves it to 'interrupted' after a phone call or a route change.
-  if (context.state !== 'running') await context.resume();
-  if (playingSource) return;
+const resetAudioState = (
+  failedContext: AudioContext,
+  failedSource?: AudioBufferSourceNode
+): void => {
+  if (context === failedContext) {
+    context = undefined;
+    playingSource = undefined;
+    buffers.clear();
+  }
+  failedSource?.disconnect();
+  if (failedContext.state !== 'closed') {
+    void failedContext.close().catch(() => {});
+  }
+};
 
-  const source = context.createBufferSource();
-  source.buffer = buffer;
-  source.connect(context.destination);
-  playingSource = source;
-  source.addEventListener(
-    'ended',
-    () => {
-      if (playingSource === source) playingSource = undefined;
-    },
-    { once: true }
-  );
-  source.start();
+export const playNotificationSound = async (url: string): Promise<void> => {
+  const audioContext = (context ??= new AudioContext());
+  const buffer = await decode(audioContext, url);
+  let source: AudioBufferSourceNode | undefined;
+  try {
+    if (context !== audioContext) return;
+    if (audioContext.state !== 'running') {
+      await audioContext.resume();
+      if (context !== audioContext) return;
+    }
+    if (playingSource) return;
+    source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    playingSource = source;
+    source.addEventListener(
+      'ended',
+      () => {
+        if (playingSource === source) playingSource = undefined;
+      },
+      { once: true }
+    );
+    source.start();
+  } catch (error) {
+    resetAudioState(audioContext, source);
+    throw error;
+  }
 };
