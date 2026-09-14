@@ -1,5 +1,5 @@
 [package]
-name = "mable"
+name = "sable"
 version = "1.21.0"
 description = "A M(ostly st)able Matrix Client"
 authors = ["Merconix & Sable Maintainers"]
