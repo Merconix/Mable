@@ -14,8 +14,8 @@ export function WelcomePage() {
       >
         <PageHeroSection>
           <PageHero
-            icon={<img width="70" height="70" src={LogoSVG} alt="Mable Logo" />}
-            title="Welcome to Mable"
+            icon={<img width="125" height="125" src={LogoSVG} alt="Mable Logo" />}
+            title="Welcome Back"
             subTitle={
               <span>
                 A M(ostly st)able Matrix client. Based on the hard work of the Cinny & Sable development teams{' '}
