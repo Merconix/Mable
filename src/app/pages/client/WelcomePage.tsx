@@ -14,7 +14,7 @@ export function WelcomePage() {
       >
         <PageHeroSection>
           <PageHero
-            icon={<img width="70" height="70" src={LogoSVG} alt="Mable Logo" />}
+            icon={<img width="125" height="125" src={LogoSVG} alt="Mable Logo" />}
             title="Welcome to Mable"
             subTitle={
               <span>
