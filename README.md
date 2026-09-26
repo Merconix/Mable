@@ -2,7 +2,7 @@
 
 A Matrix client built to enhance the user experience with quality-of-life features, cosmetics, utilities, and sheer usability. See the [changelog](https://github.com/Merconix/Mable/blob/dev/CHANGELOG.md).
 
-This fork is a customised version of the [Sable project](https://github.com/sablecient/sable) to stay on more stable builds for longer and apply personalized tweaks, mostly style related.
+This fork is a customized version of the [Sable project](https://github.com/sablecient/sable) to stay on more stable builds for longer and apply personalized tweaks, mostly style related.
 Sable is originally forked from the more stable but less feature-packed [Cinny](https://github.com/cinnyapp/cinny/), so feel free to check either out as they might better suit your needs.
 
 ## Getting started
@@ -26,12 +26,6 @@ After that, you can copy the dist/ directory to your server and serve it.
 * To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).
     * For example, if you want to deploy on `https://sable.moe/app`, then set `base: '/app'`.
     * This is set to default to /mable in this branch
-* Running on a subdirectory using Apache has given me some problems with refreshing the page leading to 404 errors, whilst not a total fix, the following rewrite rules have fixed the majority of those problems by redirecting back to the root url
-```
-RewriteEngine On
-RewriteRule (mable/)(.+).com$ "/mable" [R]
-RewriteRule (mable/home/)$ "/mable" [R]
-`````
 
 #### Optional default client settings
 
