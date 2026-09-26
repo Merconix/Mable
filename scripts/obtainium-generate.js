@@ -28,6 +28,10 @@ const additionalSettings = {
   // The nightly tag name never changes, so the version has to come from the date instead.
   ...(isNightly && {
     includePrereleases: true,
+    // Stable releases sort ahead of the reused nightly tag, so filter by title.
+    // Fallback is required: a title miss stops the scan at the first release.
+    filterReleaseTitlesByRegEx: '^Nightly',
+    fallbackToOlderReleases: true,
     useLatestAssetDateAsReleaseDate: true,
     releaseDateAsVersion: true,
     versionDetection: false,

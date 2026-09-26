@@ -1180,78 +1180,85 @@ export function ThemeCatalogSettings({ mode, onBrowseOpenChange }: ThemeCatalogS
                         be missing or not paired as `*.preview.sable.css`.
                       </Text>
                     ) : (
-                      <Box
-                        className={css.themeCardGrid}
+                      <Scroll
+                        direction="Vertical"
+                        size="300"
+                        hideTrack
+                        visibility="Hover"
                         style={{
-                          maxHeight: 'min(68dvh, 44rem)',
-                          overflowY: 'auto',
-                          paddingRight: toRem(4),
+                          height: 'min(68dvh, 44rem)',
+                          minHeight: 0,
+                          maxWidth: '100%',
                         }}
                       >
-                        {localPreviewsQuery.data.map((row) => {
-                          const slug = row.basename.replace(/[^a-zA-Z0-9_-]/g, '-') || 'theme';
-                          const kindLabel = row.kind === 'dark' ? 'Dark' : 'Light';
-                          const line1 = `${kindLabel} · ${row.contrast} contrast`;
-                          const line2 = `${row.author ? `by ${row.author}` : ''}${
-                            row.tags.length > 0
-                              ? `${row.author ? ' · ' : ''}${row.tags.join(', ')}`
-                              : ''
-                          }`.trim();
-                          const subtitle = (
-                            <>
-                              {line1}
-                              {line2 ? (
-                                <>
-                                  <br />
-                                  {line2}
-                                </>
-                              ) : null}
-                            </>
-                          );
-                          return (
-                            <ThemePreviewCard
-                              key={row.fullUrl}
-                              title={row.displayName}
-                              subtitle={subtitle}
-                              previewCssText={row.previewText}
-                              fullCssText={row.fullCssText}
-                              scopeSlug={`local-${slug}`}
-                              sourceLabel={themeSourceLabel({
-                                importedLocal: row.importedLocal,
-                                official:
+                        <Box className={css.themeCardGrid} style={{ paddingRight: toRem(4) }}>
+                          {localPreviewsQuery.data.map((row) => {
+                            const slug = row.basename.replace(/[^a-zA-Z0-9_-]/g, '-') || 'theme';
+                            const kindLabel = row.kind === 'dark' ? 'Dark' : 'Light';
+                            const line1 = `${kindLabel} · ${row.contrast} contrast`;
+                            const line2 = `${row.author ? `by ${row.author}` : ''}${
+                              row.tags.length > 0
+                                ? `${row.author ? ' · ' : ''}${row.tags.join(', ')}`
+                                : ''
+                            }`.trim();
+                            const subtitle = (
+                              <>
+                                {line1}
+                                {line2 ? (
+                                  <>
+                                    <br />
+                                    {line2}
+                                  </>
+                                ) : null}
+                              </>
+                            );
+                            return (
+                              <ThemePreviewCard
+                                key={row.fullUrl}
+                                title={row.displayName}
+                                subtitle={subtitle}
+                                previewCssText={row.previewText}
+                                fullCssText={row.fullCssText}
+                                scopeSlug={`local-${slug}`}
+                                sourceLabel={themeSourceLabel({
+                                  importedLocal: row.importedLocal,
+                                  official:
+                                    !row.importedLocal &&
+                                    !isThirdPartyThemeUrl(
+                                      row.fullUrl,
+                                      clientConfig.themeCatalogApprovedHostPrefixes
+                                    ),
+                                  url: row.fullUrl,
+                                })}
+                                copyText={row.importedLocal ? undefined : row.previewUrl}
+                                thirdParty={
                                   !row.importedLocal &&
-                                  !isThirdPartyThemeUrl(
+                                  isThirdPartyThemeUrl(
                                     row.fullUrl,
                                     clientConfig.themeCatalogApprovedHostPrefixes
-                                  ),
-                                url: row.fullUrl,
-                              })}
-                              copyText={row.importedLocal ? undefined : row.previewUrl}
-                              thirdParty={
-                                !row.importedLocal &&
-                                isThirdPartyThemeUrl(
-                                  row.fullUrl,
-                                  clientConfig.themeCatalogApprovedHostPrefixes
-                                )
-                              }
-                              isFavorited
-                              onToggleFavorite={() => removeFavorite(row.fullUrl)}
-                              onExport={() => downloadThemeFile(row)}
-                              systemTheme={systemTheme}
-                              onApplyLight={
-                                systemTheme ? () => applyFavoriteToLight(row) : undefined
-                              }
-                              onApplyDark={systemTheme ? () => applyFavoriteToDark(row) : undefined}
-                              onApplyManual={
-                                !systemTheme ? () => applyFavoriteToManual(row) : undefined
-                              }
-                              isAppliedLight={lightRemoteFullUrl === row.fullUrl}
-                              isAppliedDark={darkRemoteFullUrl === row.fullUrl}
-                              isAppliedManual={manualRemoteFullUrl === row.fullUrl}
-                            />
-                          );
-                        })}
-                      </Box>
+                                  )
+                                }
+                                isFavorited
+                                onToggleFavorite={() => removeFavorite(row.fullUrl)}
+                                onExport={() => downloadThemeFile(row)}
+                                systemTheme={systemTheme}
+                                onApplyLight={
+                                  systemTheme ? () => applyFavoriteToLight(row) : undefined
+                                }
+                                onApplyDark={
+                                  systemTheme ? () => applyFavoriteToDark(row) : undefined
+                                }
+                                onApplyManual={
+                                  !systemTheme ? () => applyFavoriteToManual(row) : undefined
+                                }
+                                isAppliedLight={lightRemoteFullUrl === row.fullUrl}
+                                isAppliedDark={darkRemoteFullUrl === row.fullUrl}
+                                isAppliedManual={manualRemoteFullUrl === row.fullUrl}
+                              />
+                            );
+                          })}
+                        </Box>
+                      </Scroll>
                     )}
                   </>
                 )}
@@ -1273,77 +1280,81 @@ export function ThemeCatalogSettings({ mode, onBrowseOpenChange }: ThemeCatalogS
                   </Text>
                 )}
                 {localTweaksQuery.isSuccess && tweakFavorites.length > 0 && (
-                  <Box
-                    direction="Column"
-                    gap="200"
+                  <Scroll
+                    direction="Vertical"
+                    size="300"
+                    hideTrack
+                    visibility="Hover"
                     style={{
-                      maxHeight: 'min(68dvh, 44rem)',
-                      overflowY: 'auto',
-                      paddingRight: toRem(4),
+                      height: 'min(68dvh, 44rem)',
+                      minHeight: 0,
+                      maxWidth: '100%',
                     }}
                   >
-                    {localTweaksQuery.data.length > 0 && unresolvedLegacyTweakCount > 0 && (
-                      <Text size="T300" priority="300">
-                        {unresolvedLegacyTweakCount} saved local tweak
-                        {unresolvedLegacyTweakCount === 1 ? ' is' : 's are'} waiting to migrate.
-                      </Text>
-                    )}
-                    {localTweaksQuery.data.length === 0 ? (
-                      <Text size="T300" priority="300">
-                        {unresolvedLegacyTweakCount === tweakFavorites.length
-                          ? 'Some saved local tweaks are waiting to migrate. Open Sable on a device that still has them to finish syncing.'
-                          : 'Could not load tweak CSS. Check the URL or your connection.'}
-                      </Text>
-                    ) : (
-                      localTweaksQuery.data.map((row) => {
-                        const isOn = enabledTweakFullUrls.includes(row.fullUrl);
-                        const descParts = [
-                          row.description,
-                          row.author ? `by ${row.author}` : '',
-                          row.tags.length > 0 ? row.tags.join(', ') : '',
-                        ].filter(Boolean);
-                        const desc =
-                          descParts.join(' · ') ||
-                          'Applies on top of your current theme after it loads.';
-                        return (
-                          <CatalogTweakCard
-                            key={row.fullUrl}
-                            displayName={row.displayName}
-                            description={desc}
-                            copyUrl={row.importedLocal ? undefined : row.fullUrl}
-                            thirdPartyChip={
-                              !row.importedLocal &&
-                              isThirdPartyThemeUrl(
-                                row.fullUrl,
-                                clientConfig.themeCatalogApprovedHostPrefixes
-                              )
-                            }
-                            isFavorited
-                            onToggleFavorite={() => removeTweakFavorite(row.fullUrl)}
-                            onExport={() => downloadTweakFile(row)}
-                            cssText={row.fullCssText}
-                            sourceLabel={themeSourceLabel({
-                              importedLocal: row.importedLocal,
-                              official:
+                    <Box direction="Column" gap="200" style={{ paddingRight: toRem(4) }}>
+                      {localTweaksQuery.data.length > 0 && unresolvedLegacyTweakCount > 0 && (
+                        <Text size="T300" priority="300">
+                          {unresolvedLegacyTweakCount} saved local tweak
+                          {unresolvedLegacyTweakCount === 1 ? ' is' : 's are'} waiting to migrate.
+                        </Text>
+                      )}
+                      {localTweaksQuery.data.length === 0 ? (
+                        <Text size="T300" priority="300">
+                          {unresolvedLegacyTweakCount === tweakFavorites.length
+                            ? 'Some saved local tweaks are waiting to migrate. Open Sable on a device that still has them to finish syncing.'
+                            : 'Could not load tweak CSS. Check the URL or your connection.'}
+                        </Text>
+                      ) : (
+                        localTweaksQuery.data.map((row) => {
+                          const isOn = enabledTweakFullUrls.includes(row.fullUrl);
+                          const descParts = [
+                            row.description,
+                            row.author ? `by ${row.author}` : '',
+                            row.tags.length > 0 ? row.tags.join(', ') : '',
+                          ].filter(Boolean);
+                          const desc =
+                            descParts.join(' · ') ||
+                            'Applies on top of your current theme after it loads.';
+                          return (
+                            <CatalogTweakCard
+                              key={row.fullUrl}
+                              displayName={row.displayName}
+                              description={desc}
+                              copyUrl={row.importedLocal ? undefined : row.fullUrl}
+                              thirdPartyChip={
                                 !row.importedLocal &&
-                                !isThirdPartyThemeUrl(
+                                isThirdPartyThemeUrl(
                                   row.fullUrl,
                                   clientConfig.themeCatalogApprovedHostPrefixes
-                                ),
-                              url: row.fullUrl,
-                            })}
-                            isOn={isOn}
-                            onSetApplied={(v) =>
-                              setTweakApplied(row.fullUrl, v, {
-                                displayName: row.displayName,
-                                basename: row.basename,
-                              })
-                            }
-                          />
-                        );
-                      })
-                    )}
-                  </Box>
+                                )
+                              }
+                              isFavorited
+                              onToggleFavorite={() => removeTweakFavorite(row.fullUrl)}
+                              onExport={() => downloadTweakFile(row)}
+                              cssText={row.fullCssText}
+                              sourceLabel={themeSourceLabel({
+                                importedLocal: row.importedLocal,
+                                official:
+                                  !row.importedLocal &&
+                                  !isThirdPartyThemeUrl(
+                                    row.fullUrl,
+                                    clientConfig.themeCatalogApprovedHostPrefixes
+                                  ),
+                                url: row.fullUrl,
+                              })}
+                              isOn={isOn}
+                              onSetApplied={(v) =>
+                                setTweakApplied(row.fullUrl, v, {
+                                  displayName: row.displayName,
+                                  basename: row.basename,
+                                })
+                              }
+                            />
+                          );
+                        })
+                      )}
+                    </Box>
+                  </Scroll>
                 )}
               </Box>
             )}

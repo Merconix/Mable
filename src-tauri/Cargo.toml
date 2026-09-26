@@ -1,6 +1,6 @@
 [package]
 name = "sable"
-version = "1.21.0"
+version = "1.22.5"
 description = "A M(ostly st)able Matrix Client"
 authors = ["Merconix & Sable Maintainers"]
 license = "AGPL-3.0-or-later"
@@ -110,12 +110,12 @@ windows = { version = "0.62", features = [
 tauri-plugin-single-instance = { version = "2.4.3", features = ["deep-link"] }
 
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
-tauri-plugin-notifications = { git = "https://github.com/SableClient/tauri-plugin-notifications.git", rev = "658491c87be246740216f97cc367e29e31e690af" }
+tauri-plugin-notifications = { git = "https://github.com/SableClient/tauri-plugin-notifications.git", rev = "92c96b300517c49024a48aaff863338e3bd63616" }
 
 # default-features = false drops notify-rust so macOS uses the native
 # UNUserNotificationCenter backend (needs a signed .app to deliver).
 [target.'cfg(target_os = "macos")'.dependencies]
-tauri-plugin-notifications = { git = "https://github.com/SableClient/tauri-plugin-notifications.git", rev = "658491c87be246740216f97cc367e29e31e690af", default-features = false }
+tauri-plugin-notifications = { git = "https://github.com/SableClient/tauri-plugin-notifications.git", rev = "92c96b300517c49024a48aaff863338e3bd63616", default-features = false }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = { version = "2", optional = true }
@@ -139,14 +139,14 @@ libloading = "0.9"
 zbus = "5"
 
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
-tauri-plugin-notifications = { git = "https://github.com/SableClient/tauri-plugin-notifications.git", rev = "658491c87be246740216f97cc367e29e31e690af", features = [
+tauri-plugin-notifications = { git = "https://github.com/SableClient/tauri-plugin-notifications.git", rev = "92c96b300517c49024a48aaff863338e3bd63616", features = [
   "push-notifications",
 ] }
 tauri-plugin-edge-to-edge = { git = "https://github.com/SableClient/tauri-plugin-edge-to-edge.git", rev = "33c6116c27be28c06df5a9d02231ecc5fdeb93c5" }
 tauri-plugin-sharekit = { git = "https://github.com/Choochmeque/tauri-plugin-sharekit", rev = "9f2b4c5d8a4f0ab910d900ba234ed8bae0ab854b" }
 tauri-plugin-app-icon = { git = "https://github.com/SableClient/tauri-plugin-app-icon", rev = "bab80ae17f6d018702e472c539d0f02eba480c21" }
 tauri-plugin-livekit-mobile = { git = "https://github.com/SableClient/tauri-plugin-livekit-mobile.git", rev = "c6f0d02ab3da1174535bc1dc8e598a2e6873f977" }
-tauri-plugin-geolocation = "2.3.3"
+tauri-plugin-geolocation = { version = "2.3.3", optional = true }
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = "0.6"
@@ -198,7 +198,7 @@ tauri-plugin-android-fs = { version = "=29.0.0", features = ["legacy-storage-per
 jni = "0.22"
 
 [features]
-default = ["wry", "updater", "matrix-crypto"]
+default = ["wry", "updater", "matrix-crypto", "geolocation"]
 custom-protocol = ["tauri/custom-protocol"]
 wry = ["tauri/wry", "dep:webkit2gtk"]
 # Tauri auto-updater. Disable with --no-default-features --features wry,cef.
@@ -209,6 +209,8 @@ cef = ["dep:tauri-runtime-cef", "dep:cef"]
 # session, which costs hundreds of MB per minute once tauri-plugin-log feeds it.
 devtools = ["dep:tauri-plugin-devtools"]
 matrix-crypto = ["dep:matrix-sdk", "dep:matrix-sdk-crypto", "dep:matrix-sdk-sqlite", "dep:http"]
+# Pulls play-services-location on Android. Off for FOSS-repo builds.
+geolocation = ["dep:tauri-plugin-geolocation"]
 [patch.crates-io]
 tauri-typegen = { git = "https://github.com/SableClient/tauri-typegen", branch = "fix/nondeterministic-generation-cache" }
 
@@ -241,3 +243,8 @@ tauri-typegen = { git = "https://github.com/SableClient/tauri-typegen", branch =
 # tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "feat/cef" }
 # tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "feat/cef" }
 # tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "feat/cef" }
+
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

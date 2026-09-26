@@ -7,6 +7,9 @@ import type { SecretStorageKeyContent } from '$types/matrix/accountData';
 import { BackupRestoreTile } from './BackupRestore';
 
 const decodeRecoveryKey = vi.hoisted(() => vi.fn<(key: string) => Uint8Array>());
+const appFetch = vi.hoisted(() => vi.fn<() => Promise<unknown>>());
+
+vi.mock('$utils/fetch', () => ({ fetch: appFetch }));
 const emitter = new TypedEventEmitter<string, Record<string, (...args: never[]) => void>>();
 const mockClient = Object.assign(emitter, {
   secretStorage: {
@@ -15,6 +18,8 @@ const mockClient = Object.assign(emitter, {
   },
   getSafeUserId: () => '@me:example.org',
   getDeviceId: () => 'DEVICE',
+  baseUrl: 'https://example.org',
+  getAccessToken: () => 'access-token',
 });
 
 vi.mock('$hooks/useMatrixClient', () => ({
@@ -61,6 +66,17 @@ const createCrypto = ({ backupInfo = BACKUP_INFO, backupKey = null }: CryptoOver
     loadSessionBackupPrivateKeyFromSecretStorage: vi
       .fn<CryptoApi['loadSessionBackupPrivateKeyFromSecretStorage']>()
       .mockResolvedValue(undefined),
+    getDeviceVerificationStatus: vi
+      .fn<CryptoApi['getDeviceVerificationStatus']>()
+      .mockResolvedValue({ crossSigningVerified: true } as Awaited<
+        ReturnType<CryptoApi['getDeviceVerificationStatus']>
+      >),
+    getOwnDeviceKeys: vi
+      .fn<CryptoApi['getOwnDeviceKeys']>()
+      .mockResolvedValue({ ed25519: 'own-ed25519', curve25519: 'own-curve25519' }),
+    getCrossSigningKeyId: vi
+      .fn<CryptoApi['getCrossSigningKeyId']>()
+      .mockResolvedValue('own-master'),
   }) as unknown as CryptoBackend;
 
 const recoveryPrompt = () => screen.queryByText(/does not hold the backup decryption key/i);
@@ -77,6 +93,14 @@ describe('BackupRestoreTile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     decodeRecoveryKey.mockReturnValue(new Uint8Array([1, 2, 3]));
+    appFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        device_keys: {
+          '@me:example.org': { DEVICE: { keys: { 'ed25519:DEVICE': 'own-ed25519' } } },
+        },
+      }),
+    });
   });
 
   it('offers recovery when a backup exists but its key is not in the crypto store', async () => {

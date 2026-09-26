@@ -4,12 +4,17 @@ import type { MatrixClient } from '$types/matrix-sdk';
 import type { Session } from '$state/sessions';
 import { getSessionStoreName } from '$state/sessions';
 import type * as MatrixSdkModule from 'matrix-js-sdk/lib/matrix';
+import type * as MatrixCryptoModule from '$utils/matrix-crypto';
 
-const { isTauri, invoke, initRustCrypto } = vi.hoisted(() => ({
-  isTauri: vi.fn<() => boolean>(() => false),
-  invoke: vi.fn<(command: string, args?: unknown) => Promise<unknown>>(),
-  initRustCrypto: vi.fn<(...args: unknown[]) => Promise<void>>(),
-}));
+const { isTauri, invoke, initRustCrypto, storeStartup, fetchPublishedDeviceKey } = vi.hoisted(
+  () => ({
+    isTauri: vi.fn<() => boolean>(() => false),
+    invoke: vi.fn<(command: string, args?: unknown) => Promise<unknown>>(),
+    initRustCrypto: vi.fn<(...args: unknown[]) => Promise<void>>(),
+    storeStartup: vi.fn<() => Promise<void>>(),
+    fetchPublishedDeviceKey: vi.fn<() => Promise<string | undefined>>(),
+  })
+);
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke,
@@ -23,12 +28,17 @@ vi.mock('matrix-js-sdk/lib/matrix', async (importOriginal) => {
     createClient: (options: Parameters<typeof actual.createClient>[0]) => {
       const mx = actual.createClient(options);
       mx.initRustCrypto = initRustCrypto as MatrixClient['initRustCrypto'];
-      mx.store.startup = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+      mx.store.startup = storeStartup as MatrixClient['store']['startup'];
       mx.store.destroy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       return mx;
     },
   };
 });
+
+vi.mock('$utils/matrix-crypto', async (importOriginal) => ({
+  ...(await importOriginal<typeof MatrixCryptoModule>()),
+  fetchPublishedDeviceKey,
+}));
 
 vi.mock('./versionsCache', () => ({
   primeVersionsFromCache: vi.fn<() => Promise<boolean>>().mockResolvedValue(false),
@@ -98,6 +108,8 @@ describe('initClient SDK crypto initialization', () => {
     isTauri.mockReturnValue(false);
     invoke.mockResolvedValue(undefined);
     initRustCrypto.mockResolvedValue(undefined);
+    storeStartup.mockResolvedValue(undefined);
+    fetchPublishedDeviceKey.mockResolvedValue(undefined);
   });
 
   it.each([false, true])('initializes SDK crypto in %s runtime', async (tauri) => {
@@ -197,6 +209,35 @@ describe('initClient SDK crypto initialization', () => {
     expect(initRustCrypto).toHaveBeenLastCalledWith({
       cryptoDatabasePrefix: getSessionStoreName(onNewDevice).rustCryptoPrefixPerDevice,
     });
+  });
+
+  it('refuses to rebuild the crypto store for a device the server already holds keys for', async () => {
+    const strandedSession = session('@stranded:example.org');
+    initRustCrypto.mockRejectedValueOnce(new Error("account in the store doesn't match"));
+    fetchPublishedDeviceKey.mockResolvedValue('published-ed25519-key');
+
+    await expect(initClient(strandedSession)).rejects.toMatchObject({
+      name: 'StrandedCryptoStoreError',
+    });
+    expect(initRustCrypto).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the crypto store when the published device key cannot be read', async () => {
+    const offlineSession = session('@offline-check:example.org');
+    initRustCrypto.mockRejectedValueOnce(new Error("account in the store doesn't match"));
+    fetchPublishedDeviceKey.mockRejectedValue(new Error('offline'));
+
+    await expect(initClient(offlineSession)).rejects.toThrow("account in the store doesn't match");
+    expect(initRustCrypto).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not rebuild the crypto store when the sync store reports a mismatch', async () => {
+    const syncFailure = session('@sync-mismatch:example.org');
+    storeStartup.mockRejectedValue(new Error('sync store version does not match'));
+
+    await expect(initClient(syncFailure)).rejects.toThrow('does not match');
+    expect(fetchPublishedDeviceKey).not.toHaveBeenCalled();
+    expect(initRustCrypto).toHaveBeenCalledTimes(1);
   });
 
   it('allows a retry after an initialization failure', async () => {

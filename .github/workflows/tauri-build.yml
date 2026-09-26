@@ -258,6 +258,8 @@ jobs:
       ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      # Release tags only: excludes nightly and unparseable tags (empty version).
+      IS_RELEASE: ${{ startsWith(needs.setup-release.outputs.tag, 'v') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -323,6 +325,29 @@ jobs:
           base64 -d <<< "$ANDROID_KEY_BASE64" > "$RUNNER_TEMP/keystore.jks"
           echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
 
+      # Must run before the Google build: they share one Gradle output directory.
+      - name: Build FOSS Android APKs
+        if: ${{ env.IS_RELEASE == 'true' }}
+        shell: bash
+        env:
+          SABLE_FOSS: '1'
+        run: |
+          # Reproducible builds: rebuilders have no Sentry secrets.
+          unset VITE_SENTRY_DSN VITE_SENTRY_ENVIRONMENT SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT
+          # tauri-build validates every file in capabilities/, so the geolocation
+          # permissions must be absent, not just unreferenced.
+          rm src-tauri/capabilities/geolocation.json
+          pnpm tauri android build --apk --split-per-abi --target aarch64 armv7 -- --no-default-features --features wry,matrix-crypto
+          git checkout -- src-tauri/capabilities/geolocation.json
+          mkdir -p android-artifacts
+          for pair in 'arm64:arm64' 'arm:armv7'; do
+            FLAVOR=${pair%%:*}
+            ABI=${pair##*:}
+            APK=$(find "src-tauri/gen/android/app/build/outputs/apk/$FLAVOR/release" -name '*.apk' -type f | head -1)
+            [ -n "$APK" ] || { echo "FOSS $ABI APK not found" >&2; exit 1; }
+            mv "$APK" "android-artifacts/Sable-${VERSION}-android-${ABI}-foss.apk"
+          done
+
       - name: Build Android bundles
         shell: bash
         env:
@@ -349,6 +374,7 @@ jobs:
           subject-path: |
             src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
             src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
+            ${{ env.IS_RELEASE == 'true' && 'android-artifacts/*.apk' || '' }}
 
       - name: Attach Android bundles to release
         shell: bash
@@ -357,7 +383,8 @@ jobs:
         run: |
           OUT="src-tauri/gen/android/app/build/outputs"
           for f in "$OUT"/apk/universal/release/*.apk \
-                   "$OUT"/bundle/universalRelease/*.aab; do
+                   "$OUT"/bundle/universalRelease/*.aab \
+                   android-artifacts/*.apk; do
             [ -e "$f" ] || continue
             echo "Uploading $f"
             gh release upload "$TAG" "$f" --clobber
@@ -1177,3 +1204,89 @@ jobs:
           git commit -m "sable ${VERSION}"
           # The tap may still be an empty repository on the first run.
           git push origin HEAD:refs/heads/main
+
+  distribute-flathub:
+    name: Open the Flathub update PR
+    needs: [setup-release, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ needs.setup-release.outputs.nightly != 'true' }}
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ needs.setup-release.outputs.tag }}
+      VERSION: ${{ needs.setup-release.outputs.version }}
+    steps:
+      - name: Bump the Flathub manifest
+        shell: bash
+        env:
+          FLATHUB_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+        run: |
+          if [ -z "${FLATHUB_TOKEN:-}" ]; then
+            echo "::notice::FLATHUB_TOKEN is not set; skipping the Flathub PR."
+            exit 0
+          fi
+          git clone --depth 1 \
+            "https://x-access-token:${FLATHUB_TOKEN}@github.com/flathub/moe.sable.client.git" flathub
+
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | select(.name | test("-linux-(x86_64|aarch64)\\.tar\\.gz$"))
+                  | "\(.name) \(.digest)"' > assets.txt
+
+          # The manifest pins these two by content, read from the release tag.
+          for name in moe.sable.client.metainfo.xml moe.sable.client.desktop; do
+            curl -fsSL "https://raw.githubusercontent.com/SableClient/Sable/${TAG}/packaging/flatpak/$name" \
+              | sha256sum | awk -v n="$name" '{print n, "sha256:" $1}' >> assets.txt
+          done
+
+          VERSION="$VERSION" python3 - flathub/moe.sable.client.yml assets.txt <<'PY'
+          import os, re, sys
+
+          manifest, digests = sys.argv[1], sys.argv[2]
+          version = os.environ["VERSION"]
+          sha = {}
+          for line in open(digests):
+              name, digest = line.split()
+              sha[name] = digest.removeprefix("sha256:")
+
+          text = open(manifest).read()
+          for arch in ("x86_64", "aarch64"):
+              name = f"Sable-{version}-linux-{arch}.tar.gz"
+              url = f"https://github.com/SableClient/Sable/releases/download/v{version}/{name}"
+              text, count = re.subn(
+                  rf"url: \S*Sable-\S+-linux-{arch}\.tar\.gz\n(\s+)sha256: \w+",
+                  lambda m: f"url: {url}\n{m.group(1)}sha256: {sha[name]}",
+                  text,
+              )
+              if count != 1:
+                  sys.exit(f"expected one {arch} source, found {count}")
+
+          for name in ("moe.sable.client.metainfo.xml", "moe.sable.client.desktop"):
+              url = f"https://raw.githubusercontent.com/SableClient/Sable/v{version}/packaging/flatpak/{name}"
+              text, count = re.subn(
+                  rf"url: \S*/packaging/flatpak/{re.escape(name)}\n(\s+)sha256: \w+",
+                  lambda m: f"url: {url}\n{m.group(1)}sha256: {sha[name]}",
+                  text,
+              )
+              if count != 1:
+                  sys.exit(f"expected one {name} source, found {count}")
+
+          open(manifest, "w").write(text)
+          PY
+
+          cd flathub
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add moe.sable.client.yml
+          if git diff --cached --quiet; then
+            echo "Nothing changed; skipping the Flathub PR."
+            exit 0
+          fi
+          git checkout -b "update-${VERSION}"
+          git commit -m "Update Sable to ${VERSION}"
+          git push origin "update-${VERSION}"
+          gh pr create --repo flathub/moe.sable.client \
+            --base master --head "update-${VERSION}" \
+            --title "Update Sable to ${VERSION}" \
+            --body "Bumps the x86_64 and aarch64 release tarballs to ${VERSION}."

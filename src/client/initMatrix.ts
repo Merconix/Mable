@@ -36,6 +36,7 @@ import { assertAuthMetadataIssuer, createSessionTokenRefresher } from './oidcTok
 import { revokeOAuthToken } from './oauthTokenRevocation';
 import { clearSecretStorageKeys, cryptoCallbacks } from './secretStorageKeys';
 import { ensureSdkCryptoCanStart } from '$app/crypto/install';
+import { fetchPublishedDeviceKey } from '$utils/matrix-crypto';
 import type { SlidingSyncDiagnostics } from './slidingSync';
 import {
   prepareSlidingSyncTimelines,
@@ -385,6 +386,20 @@ const isMismatch = (err: unknown): boolean => {
   );
 };
 
+// A rebuilt store mints a new olm identity, but the server keeps the device keys it already
+// published for this device id, so the device can never be signed or decrypted to again.
+export class StrandedCryptoStoreError extends Error {
+  constructor() {
+    super(
+      'This device can no longer use its encryption keys. Sign out and sign in again to continue using encrypted chats.'
+    );
+    this.name = 'StrandedCryptoStoreError';
+  }
+}
+
+export const isStrandedCryptoStoreError = (error: unknown): error is StrandedCryptoStoreError =>
+  error instanceof StrandedCryptoStoreError;
+
 const getSessionInitializationIdentity = (session: Session): string =>
   JSON.stringify({
     baseUrl: session.baseUrl,
@@ -441,13 +456,18 @@ type ClientInitializationResult =
   | { ok: true; mx: MatrixClient }
   | { ok: false; error: unknown; phase: 'sync_store' | 'rust_crypto' };
 
+const isUnreadableSyncSnapshot = (error: unknown): boolean => {
+  if (error instanceof TypeError) return error.message.includes('nextBatch');
+  return error instanceof Error && error.message === 'selectQuery failed for sync';
+};
+
 export const startupSyncStore = async (mx: MatrixClient, dbName: string): Promise<void> => {
   try {
     await mx.store.startup();
     return;
   } catch (error) {
     await mx.store.destroy();
-    if (!(error instanceof Error) || error.message !== 'selectQuery failed for sync') throw error;
+    if (!isUnreadableSyncSnapshot(error)) throw error;
     debugLog.warn('sync', 'Rebuilding unreadable sync snapshot', { error });
   }
 
@@ -542,12 +562,42 @@ const initializeSession = async (session: Session): Promise<MatrixClient> => {
     evictPreviousCryptoStoreOwner(storeName.rustCryptoPrefix);
     const result = await initializeClient(session, storeName.rustCryptoPrefix);
     if (!result.ok) {
-      if (!isMismatch(result.error)) {
+      // Only the crypto phase says anything about the crypto store.
+      if (result.phase !== 'rust_crypto' || !isMismatch(result.error)) {
         debugLog.error('sync', 'Failed to initialize client', {
           phase: result.phase,
           error: result.error,
         });
         throw result.error;
+      }
+
+      let publishedDeviceKey: string | undefined;
+      try {
+        publishedDeviceKey = await fetchPublishedDeviceKey(
+          session.baseUrl,
+          session.accessToken,
+          session.userId,
+          session.deviceId
+        );
+      } catch (error) {
+        log.error(
+          'initClient: could not read published device keys; refusing to rebuild the crypto store',
+          error
+        );
+        throw result.error;
+      }
+
+      if (publishedDeviceKey !== undefined) {
+        debugLog.error(
+          'sync',
+          'Crypto store mismatch on a device the server already holds keys for',
+          {
+            phase: result.phase,
+            error: result.error,
+          }
+        );
+        Sentry.captureException(result.error, { tags: { area: 'crypto_store_stranded' } });
+        throw new StrandedCryptoStoreError();
       }
 
       log.warn(

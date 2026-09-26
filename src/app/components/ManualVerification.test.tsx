@@ -13,6 +13,14 @@ const processDeviceLists = vi.hoisted(() => vi.fn<() => Promise<void>>());
 const bootstrapCrossSigning = vi.hoisted(() => vi.fn<() => Promise<void>>());
 const bootstrapSecretStorage = vi.hoisted(() => vi.fn<() => Promise<void>>());
 const loadSessionBackupPrivateKeyFromSecretStorage = vi.hoisted(() => vi.fn<() => Promise<void>>());
+const getDeviceVerificationStatus = vi.hoisted(() =>
+  vi.fn<() => Promise<{ crossSigningVerified: boolean } | null>>()
+);
+const getOwnDeviceKeys = vi.hoisted(() => vi.fn<() => Promise<{ ed25519: string }>>());
+const getCrossSigningKeyId = vi.hoisted(() => vi.fn<() => Promise<string | null>>());
+const appFetch = vi.hoisted(() => vi.fn<() => Promise<unknown>>());
+
+vi.mock('$utils/fetch', () => ({ fetch: appFetch }));
 
 vi.mock('$types/matrix-sdk', () => ({ decodeRecoveryKey }));
 vi.mock('$client/secretStorageKeys', () => ({ storePrivateKey }));
@@ -20,6 +28,8 @@ vi.mock('$hooks/useMatrixClient', () => ({
   useMatrixClient: () => ({
     getSafeUserId: () => '@me:example.org',
     getDeviceId: () => 'DEVICE',
+    baseUrl: 'https://example.org',
+    getAccessToken: () => 'access-token',
     secretStorage: { checkKey, get: getSecret },
     getCrypto: () =>
       ({
@@ -27,9 +37,20 @@ vi.mock('$hooks/useMatrixClient', () => ({
         bootstrapCrossSigning,
         bootstrapSecretStorage,
         loadSessionBackupPrivateKeyFromSecretStorage,
+        getDeviceVerificationStatus,
+        getOwnDeviceKeys,
+        getCrossSigningKeyId,
       }) as unknown as CryptoApi,
   }),
 }));
+
+const publishedKeysResponse = (ed25519: string, masterKey = 'own-master') => ({
+  ok: true,
+  json: async () => ({
+    device_keys: { '@me:example.org': { DEVICE: { keys: { 'ed25519:DEVICE': ed25519 } } } },
+    master_keys: { '@me:example.org': { keys: { [`ed25519:${masterKey}`]: masterKey } } },
+  }),
+});
 
 const KEY_ID = 'key-id';
 const KEY_CONTENT = { algorithm: 'm.secret_storage.v1.aes-hmac-sha2' } as SecretStorageKeyContent;
@@ -60,6 +81,10 @@ describe('ManualVerificationTile', () => {
     bootstrapCrossSigning.mockResolvedValue(undefined);
     bootstrapSecretStorage.mockResolvedValue(undefined);
     loadSessionBackupPrivateKeyFromSecretStorage.mockResolvedValue(undefined);
+    getDeviceVerificationStatus.mockResolvedValue({ crossSigningVerified: true });
+    getOwnDeviceKeys.mockResolvedValue({ ed25519: 'own-ed25519' });
+    getCrossSigningKeyId.mockResolvedValue('own-master');
+    appFetch.mockResolvedValue(publishedKeysResponse('own-ed25519'));
   });
 
   it('refreshes cross-signing public keys before importing the recovery key', async () => {
@@ -85,6 +110,44 @@ describe('ManualVerificationTile', () => {
 
     await waitFor(() => expect(screen.getByText('Device verified!')).toBeInTheDocument());
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['device-verification'] });
+  });
+
+  it('reports failure when the device is still not cross-signed after bootstrapping', async () => {
+    getDeviceVerificationStatus.mockResolvedValue({ crossSigningVerified: false });
+    renderTile(new QueryClient());
+
+    submitRecoveryKey('valid-key');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/could not be signed by your cross-signing identity/)
+      ).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Device verified!')).not.toBeInTheDocument();
+  });
+
+  it('reports failure when the server publishes different keys for this device', async () => {
+    appFetch.mockResolvedValue(publishedKeysResponse('stale-ed25519'));
+    renderTile(new QueryClient());
+
+    submitRecoveryKey('valid-key');
+
+    await waitFor(() =>
+      expect(screen.getByText(/no longer matches the encryption keys/)).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Device verified!')).not.toBeInTheDocument();
+  });
+
+  it('reports failure when the recovery key unlocks a superseded identity', async () => {
+    appFetch.mockResolvedValue(publishedKeysResponse('own-ed25519', 'rotated-master'));
+    renderTile(new QueryClient());
+
+    submitRecoveryKey('valid-key');
+
+    await waitFor(() =>
+      expect(screen.getByText(/previous verification identity/)).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Device verified!')).not.toBeInTheDocument();
   });
 
   it('does not bootstrap when the cross-signing keys are missing from secret storage', async () => {

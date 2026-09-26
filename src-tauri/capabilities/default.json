@@ -30,13 +30,17 @@
     "clipboard-manager:allow-write-image",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://*:*" }]
+      "allow": [{ "url": "https://*:*" }, { "url": "http://*:*" }]
     },
     {
       "identifier": "opener:allow-open-url",
       "allow": [
         {
           "url": "https://*",
+          "app": "inAppBrowser"
+        },
+        {
+          "url": "http://*",
           "app": "inAppBrowser"
         }
       ]

@@ -1,5 +1,71 @@
 # Sable Client Changelog
 
+## 1.22.5 (2026-09-20)
+
+### Fixes
+
+* Fix a crash on older WebViews that lack `toSorted`, `toReversed`, and `with`. by @eleboucher in #2122
+* Shrink the Android APK: strip the native library, drop bundled source maps, and split the F-Droid build per ABI. by @eleboucher in #2122
+
+## 1.22.4 (2026-09-18)
+
+### Fixes
+
+* Fix devices repeatedly reverting to unverified. by @eleboucher in #2115
+
+## 1.22.3 (2026-09-18)
+
+### Fixes
+
+* Enable native FCM push on Android by adding the Firebase app config. by @eleboucher in #2110
+
+## 1.22.1 (2026-09-18)
+
+### Fixes
+
+* Cap update banner changelog text so the update is updateable. by @7w1 in #2106
+
+## 1.22.0 (2026-09-17)
+
+### Features
+
+* Add support for description lists by @Steffo99 in #2098
+* Allow swiping away in-app notifications on mobile by @blueberrymuffin3 in #1863
+* Add a configurable gif provider (Tenor, Giphy or Klipy) and send gifs through the media proxy by @eleboucher in #1918
+* Add a customizable Global shortcut to show or hide the app window by @cwyptt in #2040
+* Add a built-in UnifiedPush distributor so Android push works without Google Play Services or a separate distributor app, support MSC4174 so the homeserver can deliver web push directly, and decrypt push previews through the Rust crypto engine. by @eleboucher in #1607
+* Show the gif and sticker composer buttons by default, keeping only emoji while typing on mobile. by @eleboucher in #1862
+* Publish the Flatpak for aarch64 in addition to x86_64. by @eleboucher in #2084
+* Add a setting to show all timestamps, including on grouped messages from the same sender by @cwyptt in #1942
+* Update MSC4461 (Persona) support to v3 by @blueberrymuffin3 in #1923
+
+### Fixes
+
+* Fix restoring from key backup failing entirely when a single backed-up key could not be read; the rest of the keys are now restored. by @eleboucher in #2001
+* Fix calls disconnecting on servers that use sticky memberships: the call now has permission to publish them, and sticky memberships also reach clients that sync with sliding sync. by @eleboucher in #2066
+* Fix device names being reset every time the client is opened. Also makes the device rename field set the default name when left empty. by @RoootTheFox in #1939
+* Keep verified devices verified: stop crypto-store conflicts between sessions, and restore cross-signing trust when unlocking backup with a recovery key. by @eleboucher in #2105
+* Fix a crash when emoji autocomplete results reappear while typing. by @eleboucher in #1886
+* Fix failure toasts showing the green success style with a checkmark: errors such as "Unable to mark this room as read" now use the error colour and a warning icon. by @eleboucher in #2005
+* Fix the Flatpak app failing to launch after a previous run, where a leftover CEF cache lock was mistaken for a running instance. by @eleboucher in #1989
+* Fix the forum room "Event Timeline" developer entry bouncing straight back to the forum view. by @eleboucher in #1857
+* Fix forum rooms opening in the normal chat view and improve forum post and thread navigation. by @7w1 in #1839
+* Fix avatars and media flickering, disappearing after backgrounding or token rotation, or failing to download, in the desktop and mobile apps. by @eleboucher in #2105
+* Fix mobile keyboard handling: emote backspace flicker, Android viewport height, duplicated mention pills, and a keyboard stuck over the room list, timeline images, or composer sheets. by @eleboucher in #2105
+* Make push notifications and background sync more reliable when the app is closed or in the background. by @eleboucher in #2105
+* Fix a sent message coming back in the composer, and stop undo restoring cleared content. by @eleboucher in #1862
+* Fix unexpected sign-outs and preserve saved accounts when signing in again. by @eleboucher in #2053
+* Fix sending the first message after startup taking up to 40 seconds in encrypted rooms: outgoing crypto requests and key backup checks now coalesce instead of queueing one full run per caller, and repeated undecryptable events no longer re-request the key backup version from the server. by @eleboucher in #1998
+* Fix being unable to back out of a space preview opened by address, and give Tauri webview back/swipe somewhere to land on deep-linked launches. by @eleboucher in #1868
+* Fix the login page crashing with "Invalid URL" on Android WebView below 130 by @eleboucher in #1924
+* Keep the new messages divider visible when opening a room with unread messages. by @eleboucher in #1906
+* Merge image-pack updates from legacy clients and mirror edits or deletions to active legacy pack state keys. by @7w1 in #1975
+* Reimplement responsive composer layout by @Septicity in #1865
+
+### Documentation
+
+* Update to disclosure of AI generated code by @dozro in #885
+
 ## 1.21.0 (2026-08-17)
 
 ### Features

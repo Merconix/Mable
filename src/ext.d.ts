@@ -6,6 +6,7 @@ declare const APP_VERSION: string;
 declare const BUILD_HASH: string;
 declare const IS_RELEASE_TAG: boolean;
 declare const DESKTOP_UPDATER_ENABLED: boolean;
+declare const SABLE_GEOLOCATION_ENABLED: boolean;
 
 declare module 'browser-encrypt-attachment' {
   export interface EncryptedAttachmentInfo {

@@ -21,7 +21,7 @@ async function discoverManagers(mx: MatrixClient): Promise<IntegrationManager[]>
   try {
     const baseUrl = mx.getHomeserverUrl();
     const url = new URL(baseUrl);
-    const wellKnownUrl = `https://${url.hostname}/.well-known/matrix/client`;
+    const wellKnownUrl = `${url.origin}/.well-known/matrix/client`;
 
     const resp = await fetch(wellKnownUrl, { method: 'GET' });
     if (resp.ok) {

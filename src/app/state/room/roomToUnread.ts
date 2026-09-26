@@ -46,6 +46,7 @@ const unreadInfoToUnread = (unreadInfo: UnreadInfo): Unread => ({
   highlight: unreadInfo.highlight,
   total: unreadInfo.total,
   from: null,
+  estimated: unreadInfo.estimated,
 });
 
 const putUnreadInfo = (

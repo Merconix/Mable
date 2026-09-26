@@ -4,7 +4,7 @@ import {
   getCurrentPosition,
   requestPermissions,
 } from '@tauri-apps/plugin-geolocation';
-import { isMobileTauri } from './platform';
+import { isGeolocationEnabled, isMobileTauri } from './platform';
 
 export type Coordinates = { lat: number; lon: number };
 
@@ -52,7 +52,7 @@ const getWebCoordinates = (): Promise<Coordinates> =>
 
 export const getCurrentCoordinates = async (): Promise<Coordinates> => {
   if (!isTauri()) return getWebCoordinates();
-  if (!isMobileTauri()) throw new GeolocationError('unsupported');
+  if (!isMobileTauri() || !isGeolocationEnabled()) throw new GeolocationError('unsupported');
   try {
     return await getNativeCoordinates();
   } catch (err) {

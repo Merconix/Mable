@@ -13,6 +13,7 @@ import {
   clearLoginData,
   discardSessionStores,
   initClient,
+  isStrandedCryptoStoreError,
   logoutClient,
   startClient,
 } from '$client/initMatrix';
@@ -403,7 +404,12 @@ export function ClientRoot({ children }: ClientRootProps) {
   );
 
   const isError = loadState.status === AsyncStatus.Error || startState.status === AsyncStatus.Error;
-  const nativeCryptoRecoveryRequired = nativeCryptoError !== undefined;
+  const strandedCryptoStore =
+    loadState.status === AsyncStatus.Error && isStrandedCryptoStoreError(loadState.error)
+      ? loadState.error
+      : undefined;
+  const cryptoRecoveryRequired =
+    nativeCryptoError !== undefined || strandedCryptoStore !== undefined;
 
   // Set matrix client context: homeserver and sync type (not PII)
   useEffect(() => {
@@ -444,7 +450,11 @@ export function ClientRoot({ children }: ClientRootProps) {
   // Capture fatal client failures — useAsyncCallback swallows these into state so
   // they never reach the React ErrorBoundary; explicit capture is required.
   useEffect(() => {
-    if (loadState.status === AsyncStatus.Error && !isNativeCryptoStoreError(loadState.error)) {
+    if (
+      loadState.status === AsyncStatus.Error &&
+      !isNativeCryptoStoreError(loadState.error) &&
+      !isStrandedCryptoStoreError(loadState.error)
+    ) {
       Sentry.captureException(loadState.error, { tags: { phase: 'load' } });
     }
   }, [loadState]);
@@ -496,14 +506,20 @@ export function ClientRoot({ children }: ClientRootProps) {
             <Dialog>
               <Box direction="Column" gap="400" style={{ padding: config.space.S400 }}>
                 {loadState.status === AsyncStatus.Error &&
-                  (nativeCryptoRecoveryRequired ? (
+                  (cryptoRecoveryRequired ? (
                     <>
-                      <Text>Sign in again to continue using encrypted chats.</Text>
                       <Text>
-                        Export your message keys first, or restore them from backup after signing
-                        in.
+                        {strandedCryptoStore?.message ??
+                          'Sign in again to continue using encrypted chats.'}
                       </Text>
-                      <LegacyKeyExport exporter={nativeCryptoError.exportRoomKeys} />
+                      <Text>
+                        {nativeCryptoError
+                          ? 'Export your message keys first, or restore them from backup after signing in.'
+                          : 'Restore your messages from key backup after signing in.'}
+                      </Text>
+                      {nativeCryptoError && (
+                        <LegacyKeyExport exporter={nativeCryptoError.exportRoomKeys} />
+                      )}
                       <AsyncError state={recoveryState} prefix="Failed to sign out" size="T300" />
                       <Button
                         variant="Critical"
@@ -521,7 +537,7 @@ export function ClientRoot({ children }: ClientRootProps) {
                 {startState.status === AsyncStatus.Error && (
                   <Text>{`Failed to start. ${errorMessage(startState.error)}`}</Text>
                 )}
-                {!nativeCryptoRecoveryRequired && (
+                {!cryptoRecoveryRequired && (
                   <Button variant="Critical" onClick={mx ? () => startMatrix(mx) : loadMatrix}>
                     <Text as="span" size="B400">
                       Retry

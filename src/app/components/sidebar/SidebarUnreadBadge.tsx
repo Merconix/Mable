@@ -8,6 +8,7 @@ type SidebarUnreadBadgeProps = {
   highlight?: boolean;
   count: number;
   dm?: boolean;
+  estimated?: boolean;
   mode?: UnreadBadgeMode;
 };
 
@@ -15,6 +16,7 @@ export function SidebarUnreadBadge({
   highlight,
   count,
   dm,
+  estimated,
   mode,
 }: Readonly<SidebarUnreadBadgeProps>) {
   const [showUnreadCounts] = useSetting(settingsAtom, 'showUnreadCounts');
@@ -26,6 +28,7 @@ export function SidebarUnreadBadge({
       highlight,
       count,
       dm,
+      estimated,
       showUnreadCounts,
       badgeCountDMsOnly,
       showPingCounts,

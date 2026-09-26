@@ -60,6 +60,7 @@ export type Unread = {
   total: number;
   highlight: number;
   from: Set<string> | null;
+  estimated?: boolean;
 };
 export type RoomToUnread = Map<string, Unread>;
 export type UnreadInfo = {

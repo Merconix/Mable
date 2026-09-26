@@ -36,6 +36,18 @@ describe('resolveUnreadBadgeMode', () => {
     ).toBe('count');
   });
 
+  it('returns dot for an estimated count even when unread counts are enabled', () => {
+    expect(
+      resolveUnreadBadgeMode({
+        count: 1,
+        estimated: true,
+        showUnreadCounts: true,
+        badgeCountDMsOnly: false,
+        showPingCounts: false,
+      })
+    ).toBe('dot');
+  });
+
   it('returns dot for a room unread when unread counts are disabled', () => {
     expect(
       resolveUnreadBadgeMode({

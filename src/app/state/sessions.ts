@@ -147,6 +147,13 @@ export type SessionsAction =
       session: Session;
     };
 
+// A PUT carries a session rebuilt from a login response, and `fallbackSdkStores` picks the
+// IndexedDB stores, so losing it on the same device points at an empty crypto store.
+const preserveStoreLocation = (existing: Session, next: Session): Session =>
+  existing.fallbackSdkStores && existing.deviceId === next.deviceId
+    ? { ...next, fallbackSdkStores: true }
+    : next;
+
 export const sessionsAtom = atom<Sessions, [SessionsAction], void>(
   (get) => get(baseSessionsAtom),
   (get, set, action) => {
@@ -160,7 +167,11 @@ export const sessionsAtom = atom<Sessions, [SessionsAction], void>(
         sessions.push(action.session);
       } else {
         log.log('PUT update session', action.session.userId);
-        sessions.splice(sessionIndex, 1, action.session);
+        sessions.splice(
+          sessionIndex,
+          1,
+          preserveStoreLocation(sessions[sessionIndex]!, action.session)
+        );
       }
       set(baseSessionsAtom, sessions);
       return;

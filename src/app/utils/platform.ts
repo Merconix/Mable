@@ -74,6 +74,10 @@ export function isDesktopUpdaterEnabled(): boolean {
   return DESKTOP_UPDATER_ENABLED;
 }
 
+export function isGeolocationEnabled(): boolean {
+  return SABLE_GEOLOCATION_ENABLED;
+}
+
 export function isMobileTauri(): boolean {
   const tauriOS = getTauriOS();
   return tauriOS === 'ios' || tauriOS === 'android';

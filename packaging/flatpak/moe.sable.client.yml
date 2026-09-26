@@ -18,6 +18,7 @@ finish-args:
   - --device=all
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.freedesktop.Notifications
+  - --own-name=moe.sable.client.SingleInstance
   - --talk-name=org.kde.StatusNotifierWatcher
   - --filesystem=xdg-download
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
@@ -42,6 +43,8 @@ modules:
     sources:
       - type: archive
         url: https://www.freedesktop.org/software/desktop-file-utils/releases/desktop-file-utils-0.28.tar.xz
+        mirror-urls:
+          - http://deb.debian.org/debian/pool/main/d/desktop-file-utils/desktop-file-utils_0.28.orig.tar.xz
         sha256: 4401d4e231d842c2de8242395a74a395ca468cd96f5f610d822df33594898a70
 
   - name: sable
@@ -59,9 +62,9 @@ modules:
     sources:
       - type: extra-data
         filename: sable.tar.gz
-        url: https://github.com/SableClient/Sable/releases/download/v1.21.0/Sable-1.21.0-linux-x86_64.tar.gz
-        sha256: 57caeeaa7b4c4002afd1bc6bbc47ba5807a3e326d77b55545f7e6ea2d7f69df0
-        size: 159125471
+        url: https://github.com/SableClient/Sable/releases/download/v1.22.4/Sable-1.22.4-linux-x86_64.tar.gz
+        sha256: e83150f7ade969fbfbc26b849330167145b2621a75cc906f25c9c0d5304a1024
+        size: 174342420
         only-arches: [x86_64]
         x-checker-data:
           type: json
@@ -72,9 +75,9 @@ modules:
           is-main-source: true
       - type: extra-data
         filename: sable.tar.gz
-        url: https://github.com/SableClient/Sable/releases/download/v1.21.0/Sable-1.21.0-linux-aarch64.tar.gz
-        sha256: 2d732583c4016c00fc88356ae2148efb11e02e82b46f4b4f3293554279ed5715
-        size: 175287757
+        url: https://github.com/SableClient/Sable/releases/download/v1.22.4/Sable-1.22.4-linux-aarch64.tar.gz
+        sha256: 93ab363d0fdb305c5d059258d5074d3d13fa117e11c2e270b7e8722770d2211e
+        size: 189788268
         only-arches: [aarch64]
         x-checker-data:
           type: json
@@ -94,7 +97,7 @@ modules:
       - type: file
         path: sable.sh
       - type: file
-        url: https://raw.githubusercontent.com/SableClient/Sable/v1.21.0/LICENSE
+        url: https://raw.githubusercontent.com/SableClient/Sable/v1.22.4/LICENSE
         sha256: 4df3c306dddaaf4baffdff5ca820cc679ac8cd6dc263c6a74517783e42fa7a3b
         dest-filename: LICENSE
       - type: file

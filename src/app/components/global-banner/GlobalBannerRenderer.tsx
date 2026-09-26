@@ -32,7 +32,7 @@ export function GlobalBannerRenderer() {
             <div className={css.HeaderText}>
               <Text size="H4">{renderedBanner.title}</Text>
               {typeof renderedBanner.description === 'string' ? (
-                <Text size="T300" priority="300">
+                <Text className={css.Description} size="T300" priority="300">
                   {renderedBanner.description}
                 </Text>
               ) : (

@@ -424,6 +424,7 @@ export function RoomTimeline({
 
   const readUptoEventIdRef = useRef<string | undefined>(undefined);
   if (unreadInfo) readUptoEventIdRef.current = unreadInfo.readUptoEventId;
+  const unreadResolvedRef = useRef(unreadInfo !== undefined);
   const hideReadsRef = useRef(hideReads);
   hideReadsRef.current = hideReads;
 
@@ -896,6 +897,15 @@ export function RoomTimeline({
   }, [eventId, focusLiveTimeline, setAtBottom]);
 
   useEffect(() => {
+    if (unreadResolvedRef.current) return;
+    const resolved = getRoomUnreadInfo(room, !isReady);
+    if (!resolved) return;
+    unreadResolvedRef.current = true;
+    readUptoEventIdRef.current = resolved.readUptoEventId;
+    setUnreadInfo(resolved);
+  }, [room, isReady, timelineSync.eventsLength]);
+
+  useEffect(() => {
     if (eventId) return;
     if (isReady) return;
     const { readUptoEventId, inLiveTimeline, scrollTo } = unreadInfo ?? {};
@@ -1048,6 +1058,7 @@ export function RoomTimeline({
 
   const tryAutoMarkAsRead = useCallback(() => {
     if (isInactivePanel) return; // Don't clear unread while room is behind the list
+    if (!isReady) return;
     if (!atBottomRef.current) return;
     if (!readUptoEventIdRef.current) {
       requestAnimationFrame(() => markAsRead(mx, room.roomId, hideReads));
@@ -1058,7 +1069,7 @@ export function RoomTimeline({
     if (latestTimeline === room.getLiveTimeline()) {
       requestAnimationFrame(() => markAsRead(mx, room.roomId, hideReads));
     }
-  }, [mx, room, hideReads, isInactivePanel]);
+  }, [mx, room, hideReads, isInactivePanel, isReady]);
 
   useDocumentFocusChange(
     useCallback(

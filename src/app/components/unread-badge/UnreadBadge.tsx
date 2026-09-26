@@ -8,6 +8,7 @@ type UnreadBadgeProps = {
   count: number;
   /** Whether this badge belongs to a DM room. Used with the badgeCountDMsOnly setting. */
   dm?: boolean;
+  estimated?: boolean;
   mode?: UnreadBadgeMode;
 };
 
@@ -28,18 +29,21 @@ export type UnreadBadgeMode = 'dot' | 'count';
  * @param options.showUnreadCounts Whether regular room unread badges should show counts.
  * @param options.badgeCountDMsOnly Whether direct message unread badges should show counts.
  * @param options.showPingCounts Whether highlight badges should show counts.
+ * @param options.estimated Whether the count is a placeholder awaiting backfill.
  * @returns `'count'` when the current badge context is allowed to show a number, otherwise `'dot'`.
  */
 export function resolveUnreadBadgeMode({
   highlight,
   count,
   dm,
+  estimated,
   showUnreadCounts,
   badgeCountDMsOnly,
   showPingCounts,
 }: ResolveUnreadBadgeModeOptions): UnreadBadgeMode {
   const showNumber =
     count > 0 &&
+    !estimated &&
     ((dm && badgeCountDMsOnly) || (!dm && showUnreadCounts) || (highlight && showPingCounts));
 
   return showNumber ? 'count' : 'dot';
@@ -68,7 +72,7 @@ export function UnreadBadgeCenter({ children }: { children: ReactNode }) {
   );
 }
 
-export function UnreadBadge({ highlight, count, dm, mode }: UnreadBadgeProps) {
+export function UnreadBadge({ highlight, count, dm, estimated, mode }: UnreadBadgeProps) {
   const [showUnreadCounts] = useSetting(settingsAtom, 'showUnreadCounts');
   const [badgeCountDMsOnly] = useSetting(settingsAtom, 'badgeCountDMsOnly');
   const [showPingCounts] = useSetting(settingsAtom, 'showPingCounts');
@@ -79,6 +83,7 @@ export function UnreadBadge({ highlight, count, dm, mode }: UnreadBadgeProps) {
       highlight,
       count,
       dm,
+      estimated,
       showUnreadCounts,
       badgeCountDMsOnly,
       showPingCounts,

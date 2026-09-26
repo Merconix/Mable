@@ -1117,6 +1117,34 @@ describe('unread read marker (normal sync)', () => {
     await act(() => new Promise((resolve) => requestAnimationFrame(resolve)));
     expect(markAsReadMock).not.toHaveBeenCalled();
   });
+
+  it('does not mark the room read before the initial scroll settles', async () => {
+    getRoomUnreadInfoMock.mockReturnValue(undefined);
+    windowFocused.current = true;
+
+    renderTimeline();
+    await act(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+
+    expect(markAsReadMock).not.toHaveBeenCalled();
+  });
+
+  it('resolves the read marker when the boundary loads after mount', async () => {
+    getRoomUnreadInfoMock.mockReturnValue(undefined);
+    const { rerender } = renderTimeline();
+    await settleInitialScroll();
+
+    expect(processedTimelineOptions.current?.readUptoEventId).toBeUndefined();
+
+    getRoomUnreadInfoMock.mockReturnValue({
+      readUptoEventId: '$read:example.org',
+      inLiveTimeline: true,
+      scrollTo: false,
+    });
+    timelineSync.eventsLength = 2;
+    rerender(<RoomTimeline room={room} editor={{} as Editor} />);
+
+    expect(processedTimelineOptions.current?.readUptoEventId).toBe('$read:example.org');
+  });
 });
 
 describe('unread read marker (sliding sync)', () => {

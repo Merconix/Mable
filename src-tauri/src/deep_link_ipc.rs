@@ -1,9 +1,4 @@
-//! Deep-link forwarding for the Linux CEF build.
-//!
-//! CEF is one-process-per-cache, so a deep-link relaunch can't init Chromium to
-//! forward itself. The primary binds a socket; the secondary forwards the URL
-//! and exits before touching CEF. Delivery re-emits `deep-link://new-url`, the
-//! event `@tauri-apps/plugin-deep-link`'s `onOpenUrl` already listens to.
+//! Single-instance forwarding for Linux CEF.
 
 use std::{
     io::{BufRead, BufReader, Write},
@@ -15,6 +10,7 @@ use std::{
 
 // OIDC uses the private-use `moe.sable.app:/login?...` form; other flows `sable://`.
 const SCHEMES: &[&str] = &["moe.sable.app:", "sable:"];
+const ACTIVATE: &str = "activate";
 
 fn is_deep_link(arg: &str) -> bool {
     SCHEMES.iter().any(|scheme| arg.starts_with(scheme))
@@ -44,42 +40,44 @@ where
 }
 
 pub enum ForwardResult {
-    /// URLs were written to the primary's socket; the caller must exit(0).
+    /// The launch was written to the primary's socket; the caller must exit(0).
     Forwarded,
-    /// A deep-link URL was in argv but no primary is listening → become primary.
+    /// No primary is listening, so the caller must become primary.
     NoPrimary,
-    /// No deep-link URLs in argv; a normal launch.
-    NoUrls,
 }
 
-/// Forward any `sable://` URLs in argv to the primary instance. Call BEFORE
-/// any CEF initialization.
-pub fn try_forward_deep_links() -> ForwardResult {
+/// Forward a launch to the primary before CEF initialization.
+pub fn try_forward_to_primary() -> ForwardResult {
     let urls = collect_deep_link_urls_from_args(std::env::args());
-    if urls.is_empty() {
-        return ForwardResult::NoUrls;
-    }
-
     let path = socket_path();
     match UnixStream::connect(&path) {
         Ok(mut stream) => {
             stream.set_write_timeout(Some(Duration::from_secs(2))).ok();
+            let _ = writeln!(stream, "{ACTIVATE}");
             for url in &urls {
                 let _ = writeln!(stream, "{url}");
             }
-            log::info!("[deep-link-ipc] forwarded {} URL(s) to primary", urls.len());
+            log::info!(
+                "[deep-link-ipc] forwarded launch with {} URL(s) to primary",
+                urls.len()
+            );
             ForwardResult::Forwarded
         }
         Err(_) => ForwardResult::NoPrimary,
     }
 }
 
-static PENDING_URLS: OnceLock<Arc<Mutex<Vec<String>>>> = OnceLock::new();
-type LiveHandler = Box<dyn Fn(String) + Send + Sync>;
+enum LaunchMessage {
+    Activate,
+    DeepLink(String),
+}
+
+static PENDING_MESSAGES: OnceLock<Arc<Mutex<Vec<LaunchMessage>>>> = OnceLock::new();
+type LiveHandler = Box<dyn Fn(LaunchMessage) + Send + Sync>;
 static LIVE_HANDLER: OnceLock<Mutex<Option<LiveHandler>>> = OnceLock::new();
 
-fn pending_queue() -> &'static Arc<Mutex<Vec<String>>> {
-    PENDING_URLS.get_or_init(|| Arc::new(Mutex::new(Vec::new())))
+fn pending_queue() -> &'static Arc<Mutex<Vec<LaunchMessage>>> {
+    PENDING_MESSAGES.get_or_init(|| Arc::new(Mutex::new(Vec::new())))
 }
 fn live_handler() -> &'static Mutex<Option<LiveHandler>> {
     LIVE_HANDLER.get_or_init(|| Mutex::new(None))
@@ -93,15 +91,15 @@ fn redact_for_log(url: &str) -> String {
         .to_string()
 }
 
-fn dispatch_url(url: String) {
+fn dispatch(message: LaunchMessage) {
     if let Ok(guard) = live_handler().lock() {
         if let Some(handler) = guard.as_ref() {
-            handler(url);
+            handler(message);
             return;
         }
     }
     if let Ok(mut q) = pending_queue().lock() {
-        q.push(url);
+        q.push(message);
     }
 }
 
@@ -152,9 +150,10 @@ fn handle_connection(stream: UnixStream) {
     stream.set_read_timeout(Some(Duration::from_secs(3))).ok();
     for line in BufReader::new(stream).lines() {
         match line {
+            Ok(line) if line == ACTIVATE => dispatch(LaunchMessage::Activate),
             Ok(url) if is_deep_link(&url) => {
                 log::info!("[deep-link-ipc] received {}", redact_for_log(&url));
-                dispatch_url(url);
+                dispatch(LaunchMessage::DeepLink(url));
             }
             Ok(_) => {}
             Err(_) => break,
@@ -167,25 +166,79 @@ fn handle_connection(stream: UnixStream) {
 // `://` can't form a valid identifier).
 const NEW_URL_EVENT: &str = "deep-link://new-url";
 
-/// Install a live handler that emits `NEW_URL_EVENT` and drain anything queued
-/// before now. Call from `setup()`.
-pub fn drain_pending_urls<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    use tauri::Emitter;
+pub fn drain_pending_launches<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    use tauri::{Emitter, Manager};
 
     let app_for_handler = app.clone();
     if let Ok(mut guard) = live_handler().lock() {
-        *guard = Some(Box::new(move |url: String| {
-            if let Err(e) = app_for_handler.emit(NEW_URL_EVENT, vec![url]) {
-                log::warn!("[deep-link-ipc] emit failed: {e}");
+        *guard = Some(Box::new(move |message| match message {
+            LaunchMessage::Activate => {
+                if let Some(window) = app_for_handler.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            LaunchMessage::DeepLink(url) => {
+                if let Err(e) = app_for_handler.emit(NEW_URL_EVENT, vec![url]) {
+                    log::warn!("[deep-link-ipc] emit failed: {e}");
+                }
             }
         }));
     }
 
-    let pending: Vec<String> = pending_queue()
+    let pending: Vec<LaunchMessage> = pending_queue()
         .lock()
         .map(|mut q| std::mem::take(&mut *q))
         .unwrap_or_default();
-    for url in pending {
-        let _ = app.emit(NEW_URL_EVENT, vec![url]);
+    for message in pending {
+        match message {
+            LaunchMessage::Activate => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            LaunchMessage::DeepLink(url) => {
+                let _ = app.emit(NEW_URL_EVENT, vec![url]);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        collect_deep_link_urls_from_args, handle_connection, live_handler, LaunchMessage, ACTIVATE,
+    };
+    use std::{
+        io::Write,
+        os::unix::net::UnixStream,
+        sync::{Arc, Mutex},
+    };
+
+    #[test]
+    fn regular_launch_activates_the_primary() {
+        let activated = Arc::new(Mutex::new(false));
+        let received = activated.clone();
+        *live_handler().lock().unwrap() = Some(Box::new(move |message| {
+            if matches!(message, LaunchMessage::Activate) {
+                *received.lock().unwrap() = true;
+            }
+        }));
+
+        let (reader, mut writer) = UnixStream::pair().unwrap();
+        writeln!(writer, "{ACTIVATE}").unwrap();
+        drop(writer);
+        handle_connection(reader);
+
+        assert!(*activated.lock().unwrap());
+    }
+
+    #[test]
+    fn collects_only_supported_deep_links() {
+        assert_eq!(
+            collect_deep_link_urls_from_args(["sable", "--flag", "sable://room", "https://x"]),
+            ["sable://room"]
+        );
     }
 }

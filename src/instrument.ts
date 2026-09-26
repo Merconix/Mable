@@ -7,6 +7,7 @@
  * - VITE_APP_VERSION: Release version for tracking
  */
 /* oxlint-disable no-console */
+import './arrayCompat';
 import './promiseCompat';
 import * as Sentry from '@sentry/react';
 import React from 'react';

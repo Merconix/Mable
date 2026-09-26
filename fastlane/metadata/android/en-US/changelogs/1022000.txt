@@ -1,0 +1,4 @@
+• Add support for description lists
+• Allow swiping away in-app notifications on mobile
+• Add a configurable gif provider (Tenor, Giphy or Klipy) and send gifs through the media proxy
+• Add a customizable Global shortcut to show or hide the app window

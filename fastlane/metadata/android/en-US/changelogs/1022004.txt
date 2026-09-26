@@ -1,0 +1,1 @@
+• Fix devices repeatedly reverting to unverified.

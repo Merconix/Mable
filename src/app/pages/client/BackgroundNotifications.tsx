@@ -55,6 +55,10 @@ const debugLog = createDebugLogger('BackgroundNotifications');
 
 const BACKGROUND_STAGGER_DELAY_MS = 5_000;
 
+// These sync the account's own device without crypto, so they ack and discard its to-device
+// traffic. Giving them a second store for the same deviceId strands the device instead.
+const BACKGROUND_SYNC_CLIENTS_ENABLED = false;
+
 let desktopNotificationSeq = 1;
 const nextDesktopNotificationId = (): number => {
   const id = desktopNotificationSeq;
@@ -180,7 +184,7 @@ export function BackgroundNotifications() {
   }
 
   useEffect(() => {
-    if (!shouldRunBackgroundNotifications) {
+    if (!shouldRunBackgroundNotifications || !BACKGROUND_SYNC_CLIENTS_ENABLED) {
       return undefined;
     }
 

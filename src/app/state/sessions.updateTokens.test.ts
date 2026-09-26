@@ -83,3 +83,62 @@ describe("sessionsAtom 'UPDATE' action", () => {
     expect(session?.slidingSyncOptIn).toBe(true);
   });
 });
+
+describe("sessionsAtom 'PUT' action", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('keeps the fallback store flag when the same device signs in again', () => {
+    const store = createStore();
+    store.set(sessionsAtom, {
+      type: 'PUT',
+      session: { ...baseSession, fallbackSdkStores: true },
+    });
+
+    store.set(sessionsAtom, {
+      type: 'PUT',
+      session: { ...baseSession, accessToken: 'fresh-access' },
+    });
+
+    const [alice] = store.get(sessionsAtom);
+    expect(alice!.fallbackSdkStores).toBe(true);
+    expect(alice!.accessToken).toBe('fresh-access');
+  });
+
+  it('drops the fallback store flag when the session moves to a new device', () => {
+    const store = createStore();
+    store.set(sessionsAtom, {
+      type: 'PUT',
+      session: { ...baseSession, fallbackSdkStores: true },
+    });
+
+    store.set(sessionsAtom, {
+      type: 'PUT',
+      session: { ...baseSession, deviceId: 'DEV2', accessToken: 'fresh-access' },
+    });
+
+    const [alice] = store.get(sessionsAtom);
+    expect(alice!.fallbackSdkStores).toBeUndefined();
+    expect(alice!.deviceId).toBe('DEV2');
+  });
+
+  it('does not resurrect fields a re-login cleared', () => {
+    const store = createStore();
+    store.set(sessionsAtom, { type: 'PUT', session: baseSession });
+
+    store.set(sessionsAtom, {
+      type: 'PUT',
+      session: {
+        baseUrl: baseSession.baseUrl,
+        userId: baseSession.userId,
+        deviceId: baseSession.deviceId,
+        accessToken: 'password-login-access',
+      },
+    });
+
+    const [alice] = store.get(sessionsAtom);
+    expect(alice!.refreshToken).toBeUndefined();
+    expect(alice!.oidc).toBeUndefined();
+  });
+});

@@ -96,7 +96,7 @@ export enum LocationErrors {
   none,
   permissions = 'You have denied Sable access to you location services',
   module = 'Your device does not have a gps module, or it may not be turned on',
-  unsupported = 'Location services are unavailable on desktop, enter or paste the coordinates instead',
+  unsupported = 'Location services are unavailable in this build, enter or paste the coordinates instead',
   unknown = 'The sharing failed for unknown reasons',
   clipboard = 'Unable to identify the coordinates from clipboard',
   missingClipboard = 'Unable to retrieve clipboard contents',

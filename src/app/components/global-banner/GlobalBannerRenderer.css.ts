@@ -89,6 +89,14 @@ export const HeaderText = style({
   gap: toRem(4),
 });
 
+export const Description = style({
+  display: '-webkit-box',
+  WebkitLineClamp: 6,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  overflowWrap: 'anywhere',
+});
+
 export const Actions = style({
   display: 'flex',
   gap: config.space.S200,

@@ -1,6 +1,6 @@
 import type { EventTimeline, MatrixEvent, Room } from '$types/matrix-sdk';
 import { Direction } from '$types/matrix-sdk';
-import { roomHaveNotification, roomHaveUnread } from '$utils/room/unread';
+import { getFullyReadEventId, roomHaveNotification, roomHaveUnread } from '$utils/room/unread';
 
 export const PAGINATION_LIMIT = 60;
 
@@ -100,9 +100,8 @@ export const getEmptyTimeline = () => ({
 });
 
 export const getRoomUnreadInfo = (room: Room, scrollTo = false) => {
-  if (!roomHaveNotification(room) && !roomHaveUnread(room.client, room)) return undefined;
-
-  const readUptoEventId = room.getEventReadUpTo(room.client.getUserId() ?? '');
+  const readUptoEventId =
+    room.getEventReadUpTo(room.client.getUserId() ?? '') ?? getFullyReadEventId(room);
   if (!readUptoEventId) return undefined;
 
   const evtTimeline = getEventTimeline(room, readUptoEventId);
@@ -116,9 +115,14 @@ export const getRoomUnreadInfo = (room: Room, scrollTo = false) => {
   }
 
   const latestTimeline = getFirstLinkedTimeline(evtTimeline, Direction.Forward);
+  const inLiveTimeline = latestTimeline === room.getLiveTimeline();
+  if (inLiveTimeline && !roomHaveNotification(room) && !roomHaveUnread(room.client, room)) {
+    return undefined;
+  }
+
   return {
     readUptoEventId,
-    inLiveTimeline: latestTimeline === room.getLiveTimeline(),
+    inLiveTimeline,
     scrollTo,
   };
 };

@@ -56,6 +56,8 @@ const isTauriBuild = Boolean(process.env.TAURI_ENV_PLATFORM);
 const isTauriDebug = process.env.TAURI_ENV_DEBUG === 'true';
 const tauriBuildMinify = !isTauriDebug ? 'esbuild' : false;
 const desktopUpdaterEnabled = process.env.VITE_DESKTOP_UPDATER_ENABLED !== 'false';
+// FOSS builds drop tauri-plugin-geolocation, so its commands are not registered.
+const geolocationEnabled = process.env.SABLE_FOSS !== '1';
 const sentryUploadEnabled = Boolean(
   process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
 );
@@ -78,7 +80,7 @@ const callEmbeddedDir = 'node_modules/@sableclient/sable-call-embedded/dist';
 const copyFiles = {
   targets: [
     {
-      src: callEmbeddedDir,
+      src: [callEmbeddedDir, `!${callEmbeddedDir}/**/*.map`],
       dest: 'public/element-call',
       rename: { stripBase: callEmbeddedDir.split('/').length },
     },
@@ -163,6 +165,7 @@ export default defineConfig(({ command }) => {
       SABLE_PRODUCT_NAME: JSON.stringify(baseProductName),
       SABLE_BUILD_FLAVOR: JSON.stringify(buildFlavor),
       DESKTOP_UPDATER_ENABLED: JSON.stringify(desktopUpdaterEnabled),
+      SABLE_GEOLOCATION_ENABLED: JSON.stringify(geolocationEnabled),
     },
     resolve: {
       alias: {

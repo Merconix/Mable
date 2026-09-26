@@ -98,6 +98,37 @@ describe('startupSyncStore', () => {
     expect(deleteDatabase).not.toHaveBeenCalled();
   });
 
+  it('recovers when the sync row comes back as a null value', async () => {
+    const original = IDBObjectStore.prototype.openCursor;
+    let reads = 0;
+    vi.spyOn(IDBObjectStore.prototype, 'openCursor').mockImplementation(function (
+      this: IDBObjectStore,
+      ...args
+    ) {
+      if (this.name !== 'sync' || reads > 0) return original.apply(this, args);
+      reads += 1;
+      const request: IDBRequest<IDBCursorWithValue | null> = new IDBRequest();
+      let cursor: unknown = {
+        value: null,
+        continue: () => {
+          cursor = null;
+          queueMicrotask(() => request.onsuccess?.(new Event('success')));
+        },
+      };
+      Object.defineProperty(request, 'result', { get: () => cursor });
+      queueMicrotask(() => request.onsuccess?.(new Event('success')));
+      return request;
+    });
+    const deleteDatabase = vi.spyOn(indexedDB, 'deleteDatabase');
+
+    await expect(startupSyncStore(mx, dbName)).resolves.toBeUndefined();
+
+    expect(await mx.store.getSavedSync()).toBeNull();
+    expect(await mx.store.getOldestToDeviceBatch()).toMatchObject({ txnId: 'pending-message' });
+    expect(mx.getAccessToken()).toBe('session-token');
+    expect(deleteDatabase).not.toHaveBeenCalled();
+  });
+
   it('keeps a readable sync snapshot', async () => {
     await startupSyncStore(mx, dbName);
     expect(await mx.store.getSavedSyncToken()).toBe('cached-token');
